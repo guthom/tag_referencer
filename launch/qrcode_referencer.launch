@@ -1,0 +1,3 @@
+<launch>  
+  <node name="qrcode_referencer" pkg="qrcode_referencer" type="qrcode_referencer" output="screen"/>
+</launch>
