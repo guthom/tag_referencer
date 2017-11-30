@@ -43,9 +43,10 @@ find_package(catkin REQUIRED
     nav_msgs
     tf2
     tf2_ros
+    cv_bridge
     custom_parameter
     )
-    
+
 #add all message files
 add_message_files(
     FILES
@@ -67,7 +68,7 @@ generate_messages(
 
 #create catkin package with all needed dependencies
 catkin_package(
-  #INCLUDE_DIRS include
+  #INCLUDE_DIRS /include
   LIBRARIES #${PROJECT_NAME}
   CATKIN_DEPENDS message_runtime
       geometry_msgs      
@@ -77,19 +78,19 @@ catkin_package(
 #include directories
 include_directories(include ${CATKIN_DEVEL_PREFIX}/include)
 include_directories(include ${catkin_INCLUDE_DIRS}
-    ${Boost_INCLUDE_DIR} 
-    ${EIGEN_INCLUDE_DIRS}
+    ${Boost_INCLUDE_DIR}
+        ${EIGEN_INCLUDE_DIRS}
 )
 
 
 #SET GLOBAL DEPENDECIES and Links
 set(LINKLIBS)
-set(GLOB_LINKLIBS ${catkin_LIBRARIES} ) 
+set(GLOB_LINKLIBS ${catkin_LIBRARIES} zbar)
 set(SUBLIBS)
 set(GLOB_DEPENDENCIES 
     ${PROJECT_NAME}_generate_messages
-    ${catkin_EXPORTED_TARGETS} 
-)
+    ${catkin_EXPORTED_TARGETS}
+        )
 
 #read all directories as submodules
 FILE(GLOB children RELATIVE ${CMAKE_CURRENT_LIST_DIR}/${SRC_PREFIX} ${CMAKE_CURRENT_LIST_DIR}/${SRC_PREFIX}/*)
