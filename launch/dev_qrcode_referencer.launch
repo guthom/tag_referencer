@@ -1,0 +1,13 @@
+<launch>  
+  <!-- load params-->
+  <arg name="rviz_cfg" default="$(find qrcode_referencer)/rvizConfig/dev.rviz" />
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rviz_cfg)"/>	
+
+  <node name="rqt_graph" pkg="rqt_graph" type="rqt_graph"/>	
+
+  <!-- replay dev rosbag-->
+  <include file="$(find qrcode_referencer)/launch/replay_bag.launch">
+    <arg name="loop" value="true"/>
+  </include>
+
+</launch>
