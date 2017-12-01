@@ -19,9 +19,10 @@ struct image_data{
     int id;
     std::string info = "";
     std::string frameName = "";
+    int pixX = 0;
+    int pixY = 0;
     geometry_msgs::Pose framePose;
     geometry_msgs::Pose qrPose;
-
 };
 
 //common stuff
@@ -63,6 +64,7 @@ void InitParams()
 
 void InitZBar()
 {
+    //TODO: maybe theres a better parameterset for the configuration
     imgScanner.set_config(ZBAR_NONE, ZBAR_CFG_ENABLE, 1);
 }
 
@@ -73,33 +75,30 @@ void Init()
     InitZBar();
 }
 
-image_data ProcessRawString(std::string rawData)
+void ProcessRawString(std::string rawString, image_data* retData)
 {
-    image_data ret;
     std::vector<std::string> qrCode;
-    boost::split(qrCode, rawData, boost::is_any_of(",;[]"));
+    boost::split(qrCode, rawString, boost::is_any_of(",;[]"));
 
     try
     {
-        ret.id = std::stoi(qrCode[0]);
-        ret.success = true;
-        ret.info=qrCode[1];
-        ret.frameName=qrCode[2];
+        retData->id = std::stoi(qrCode[0]);
+        retData->success = true;
+        retData->info=qrCode[1];
+        retData->frameName=qrCode[2];
         //parse framePose given within the qrcode information
-        ret.framePose.position.x = std::stof(qrCode[3]);
-        ret.framePose.position.y = std::stof(qrCode[4]);
-        ret.framePose.position.z = std::stof(qrCode[5]);
-        ret.framePose.orientation.x = std::stof(qrCode[6]);
-        ret.framePose.orientation.y = std::stof(qrCode[7]);
-        ret.framePose.orientation.z = std::stof(qrCode[8]);
-        ret.framePose.orientation.w = std::stof(qrCode[9]);
+        retData->framePose.position.x = std::stof(qrCode[3]);
+        retData->framePose.position.y = std::stof(qrCode[4]);
+        retData->framePose.position.z = std::stof(qrCode[5]);
+        retData->framePose.orientation.x = std::stof(qrCode[6]);
+        retData->framePose.orientation.y = std::stof(qrCode[7]);
+        retData->framePose.orientation.z = std::stof(qrCode[8]);
+        retData->framePose.orientation.w = std::stof(qrCode[9]);
     }
     catch (const std::exception& e)
     {
         ROS_ERROR_STREAM("Error while parsing QR-Code Information, wrong format???");
     }
-
-    return ret;
 }
 
 void ScanImg(Image* image)
@@ -112,19 +111,25 @@ void ScanImg(Image* image)
     if (res != 0)
     {
         //extract symbol information
-        std::string rawText;
+        int counter = 0;
         for(Image::SymbolIterator symbol = image->symbol_begin(); symbol != image->symbol_end(); ++symbol)
         {
-            image_data entry = ProcessRawString(symbol->get_data().c_str());
+            std::string test = symbol->get_data();
 
+            image_data entry;
+            ProcessRawString(symbol->get_data().c_str(), &entry);
+
+            entry.pixX = symbol->get_location_x(counter);
+            entry.pixY = symbol->get_location_y(counter);
 
             qrCodes.push_back(entry);
+            counter += 1;
         }
     }
     // clean up
     image->set_data(NULL, 0);
     for(int i = 0; i < qrCodes.size(); i++) {
-        ROS_INFO_STREAM(qrCodes[i].frameName);
+        ROS_INFO_STREAM(qrCodes[i].frameName + "; "<< qrCodes[i].pixY << "; " << qrCodes[i].pixX);
     }
 
     setQrCodesData(qrCodes);
