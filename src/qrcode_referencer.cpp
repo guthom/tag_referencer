@@ -14,8 +14,21 @@
 #include <boost/thread.hpp>
 #include <boost/algorithm/string.hpp>
 
+struct image_data{
+    bool success = false;
+    int id;
+    std::string info = "";
+    std::string frameName = "";
+    geometry_msgs::Pose framePose;
+    geometry_msgs::Pose qrPose;
+
+};
+
 //common stuff
 std::string nodeName = "qrcode_referencer";
+
+//boost stuff
+boost::mutex* _mutex;
 
 //ros sutff
 ros::NodeHandle* node;
@@ -29,15 +42,15 @@ customparameter::Parameter<int> paramRefreshRate;
 using namespace zbar;
 ImageScanner imgScanner;
 
-struct image_data{
-    bool success;
-    int id;
-    std::string info;
-    std::string frameName;
-    geometry_msgs::Pose framePose;
-    geometry_msgs::Pose qrPose;
+//qrCode data
+std::vector<image_data>* _qrCodesData;
+void setQrCodesData(std::vector<image_data> data)
+{
+    _mutex->lock();
+    _qrCodesData = &data;
+    _mutex->unlock();
+}
 
-};
 
 void InitParams()
 {
@@ -51,34 +64,41 @@ void InitParams()
 void InitZBar()
 {
     imgScanner.set_config(ZBAR_NONE, ZBAR_CFG_ENABLE, 1);
-
-
 }
 
 void Init()
 {
+    _mutex = new boost::mutex();
     InitParams();
     InitZBar();
 }
 
-image_data processRawString(std::string rawData)
+std::vector<image_data> processRawString(std::string rawData)
 {
-    image_data ret;
-    std::vector<std::string> vector;
-    boost::split(vector, rawData, boost::is_any_of(";,[]"));
+    std::vector<image_data> ret;
+    std::vector<std::string> qrCodes;
+    boost::split(qrCodes, rawData, boost::is_any_of(";"));
 
     try {
-        ret.id = std::stoi(vector[0]);
-        ret.info=vector[1];
-        ret.frameName=vector[2];
-        //parse framePose given within the qrcode information
-        ret.framePose.position.x = std::stof(vector[4]);
-        ret.framePose.position.y = std::stof(vector[5]);
-        ret.framePose.position.z = std::stof(vector[6]);
-        ret.framePose.orientation.x = std::stof(vector[7]);
-        ret.framePose.orientation.y = std::stof(vector[8]);
-        ret.framePose.orientation.z = std::stof(vector[9]);
-        ret.framePose.orientation.w = std::stof(vector[10]);
+        for(int i = 0; i < qrCodes.size() - 1; i++)
+        {
+            std::vector<std::string> vector;
+            std::string rawString = qrCodes[i];
+            boost::split(vector, rawString, boost::is_any_of(",[]"));
+            image_data entry;
+            entry.id = std::stoi(vector[0]);
+            entry.success = true;
+            entry.info=vector[1];
+            entry.frameName=vector[2];
+            //parse framePose given within the qrcode information
+            entry.framePose.position.x = std::stof(vector[3]);
+            entry.framePose.position.y = std::stof(vector[4]);
+            entry.framePose.position.z = std::stof(vector[5]);
+            entry.framePose.orientation.x = std::stof(vector[6]);
+            entry.framePose.orientation.y = std::stof(vector[7]);
+            entry.framePose.orientation.z = std::stof(vector[8]);
+            entry.framePose.orientation.w = std::stof(vector[9]);
+        }
     } catch (const std::exception& e)
     {
         ROS_ERROR_STREAM("Error while parsing QR-Code Information, wrong format???");
@@ -87,10 +107,9 @@ image_data processRawString(std::string rawData)
     return ret;
 }
 
-image_data ScanImg(Image* image)
+void ScanImg(Image* image)
 {
-    image_data qrCode;
-    qrCode.success = false;
+    std::vector<image_data> qrCodes;
 
     int res = imgScanner.scan(*image);
     ROS_INFO_STREAM("Result:" << res);
@@ -103,14 +122,15 @@ image_data ScanImg(Image* image)
             rawText += symbol->get_data().c_str();
         }
 
-        qrCode = processRawString(rawText);
-        qrCode.success = true;
+        qrCodes = processRawString(rawText);
     }
     // clean up
     image->set_data(NULL, 0);
+    for(int i = 0; i < qrCodes.size(); i++) {
+        ROS_INFO_STREAM(qrCodes[i].frameName);
+    }
 
-    ROS_INFO_STREAM(qrCode.frameName);
-    return qrCode;
+    setQrCodesData(qrCodes);
 }
 
 void imageCallback(const sensor_msgs::Image::ConstPtr& msg)
@@ -121,7 +141,7 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg)
     Image* zbar_image = new Image((unsigned  int)cv_image->image.cols, (unsigned  int)cv_image->image.rows, "Y800",
                      cv_image->image.data, (unsigned  int)(cv_image->image.cols * cv_image->image.rows));
 
-    image_data qrCode = ScanImg(zbar_image);
+    ScanImg(zbar_image);
 }
 
 int main(int argc, char **argv)
