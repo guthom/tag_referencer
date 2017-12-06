@@ -7,7 +7,7 @@ set(CMAKE_BUILD_TYPE Debug)
 #set c++ standard
 set(CMAKE_CXX_STANDARD 11)
 #set include directories
-#include_directories(${PROJECT_SOURCE_DIR})
+include_directories(${PROJECT_SOURCE_DIR})
 
 #search for SOURCES, HEADERS, MESSAGES, SERVICES and RESOURCES
 set(SRC_PREFIX src/)
