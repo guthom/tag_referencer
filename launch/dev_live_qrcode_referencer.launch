@@ -3,7 +3,10 @@
   <arg name="rviz_cfg" default="$(find qrcode_referencer)/rvizConfig/dev.rviz" />
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rviz_cfg)"/>	
 
-  <node name="rqt_graph" pkg="rqt_graph" type="rqt_graph"/>	
+  <node name="rqt_graph" pkg="rqt_graph" type="rqt_graph"/>
+
+  <!-- run static information core node-->  
+  <node name="static_information" pkg="kollro_solver" type="StaticInformation"/>	
 
   <!-- launch zed-->
   <include file="$(find zed_wrapper)/launch/zed.launch">
