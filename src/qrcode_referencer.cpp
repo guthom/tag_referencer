@@ -3,6 +3,7 @@
 
 #include <ros/subscriber.h>
 #include <sensor_msgs/Image.h>
+#include <sensor_msgs/PointCloud2.h>
 #include <geometry_msgs/Pose.h>
 #include <cv_bridge/cv_bridge.h>
 
@@ -34,6 +35,7 @@ boost::mutex* _mutex;
 //ros sutff
 ros::NodeHandle* node;
 ros::Subscriber subImageMessage;
+ros::Subscriber subDepthImageMessage;
 
 //parameter stuff
 customparameter::ParameterHandler* parameterHandler;
@@ -59,13 +61,13 @@ void InitParams()
     parameterHandler = new customparameter::ParameterHandler(node);
     std::string subNamespace = "";
     //Standard params
-    paramRefreshRate = parameterHandler->AddParameter("RefreshRate", "", (int)20);
+    paramRefreshRate = parameterHandler->AddParameter("RefreshRate", "", (int)1);
 }
 
 void InitZBar()
 {
     //TODO: maybe theres a better parameterset for the configuration
-    imgScanner.set_config(ZBAR_NONE, ZBAR_CFG_ENABLE, 1);
+    imgScanner.set_config(ZBAR_QRCODE, ZBAR_CFG_ENABLE, 1);
 }
 
 void Init()
@@ -101,14 +103,53 @@ void ProcessRawString(std::string rawString, image_data* retData)
     }
 }
 
-void ScanImg(Image* image)
+boost::mutex mutexImage;
+Image* currentZbarImage;
+sensor_msgs::Image currentImageMsg;
+void imageCallback(const sensor_msgs::Image::ConstPtr& msg)
+{
+    cv_bridge::CvImageConstPtr cv_image;
+    cv_image = cv_bridge::toCvShare(msg, "mono8");
+
+    mutexImage.lock();
+    //clean old data
+    if(currentZbarImage)
+    {
+        //clean up if needed
+        currentZbarImage->set_data(NULL, 0);
+    }
+
+    currentZbarImage = new Image((unsigned  int)cv_image->image.cols, (unsigned  int)cv_image->image.rows, "Y800",
+                     cv_image->image.data, (unsigned  int)(cv_image->image.cols * cv_image->image.rows));
+    currentImageMsg = *msg;
+    mutexImage.unlock();
+}
+
+boost::mutex mutexDepth;
+sensor_msgs::PointCloud2 currentDepthMsg;
+void deptCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& msg)
+{
+    mutexDepth.lock();
+    currentDepthMsg = *msg;
+    mutexDepth.unlock();
+}
+
+
+void ScanCurrentImg()
 {
     std::vector<image_data> qrCodes;
 
-    int res = imgScanner.scan(*image);
-    ROS_INFO_STREAM("Result:" << res);
+    mutexImage.lock();
+    Image *image = new Image(*currentZbarImage);
+    mutexImage.unlock();
 
-    if (res != 0)
+    int res = imgScanner.scan(*image);
+
+    if(res == -1)
+    {
+        ROS_INFO_STREAM("Error occurred while scanning image!");
+    }
+    else if (res >= 0)
     {
         //extract symbol information
         int counter = 0;
@@ -125,25 +166,20 @@ void ScanImg(Image* image)
             qrCodes.push_back(entry);
             counter += 1;
         }
+
+        //print res
+        ROS_INFO_STREAM("Decoded " << res << " QRCodes");
+        for(int i = 0; i < qrCodes.size(); i++)
+        {
+            ROS_INFO_STREAM(qrCodes[i].frameName + "; "<< qrCodes[i].pixY << "; " << qrCodes[i].pixX);
+        }
+
+        setQrCodesData(qrCodes);
     }
-    // clean up
+
+    //clean up date
+    imgScanner.recycle_image(*image);
     image->set_data(NULL, 0);
-    for(int i = 0; i < qrCodes.size(); i++) {
-        ROS_INFO_STREAM(qrCodes[i].frameName + "; "<< qrCodes[i].pixY << "; " << qrCodes[i].pixX);
-    }
-
-    setQrCodesData(qrCodes);
-}
-
-void imageCallback(const sensor_msgs::Image::ConstPtr& msg)
-{
-    cv_bridge::CvImageConstPtr cv_image;
-    cv_image = cv_bridge::toCvShare(msg, "mono8");
-
-    Image* zbar_image = new Image((unsigned  int)cv_image->image.cols, (unsigned  int)cv_image->image.rows, "Y800",
-                     cv_image->image.data, (unsigned  int)(cv_image->image.cols * cv_image->image.rows));
-
-    ScanImg(zbar_image);
 }
 
 int main(int argc, char **argv)
@@ -153,12 +189,18 @@ int main(int argc, char **argv)
 
     Init();
 
-    subImageMessage = node->subscribe("/zed/right/image_rect_color", 1000, imageCallback);
+    subImageMessage = node->subscribe("/zed/right/image_rect_color", 1, imageCallback);
+    subDepthImageMessage = node->subscribe("/zed/depth/depth_registered", 1, deptCloudCallback);
 
     ros::Rate rate(paramRefreshRate.GetValue());
     while(node->ok())
     {        
         ros::spinOnce();
+
+        if(currentZbarImage)
+        {
+            ScanCurrentImg();
+        }
 
         rate.sleep();        
     }
