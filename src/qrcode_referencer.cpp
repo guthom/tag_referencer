@@ -2,8 +2,10 @@
 #include <string.h>
 
 #include <ros/subscriber.h>
+#include <qrcode_referencer/GetQRPose.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/CameraInfo.h>
 #include <geometry_msgs/Pose.h>
 #include <cv_bridge/cv_bridge.h>
 
@@ -34,12 +36,16 @@ boost::mutex* _mutex;
 
 //ros sutff
 ros::NodeHandle* node;
+ros::Subscriber subCameraInfo;
 ros::Subscriber subImageMessage;
 ros::Subscriber subDepthImageMessage;
+ros::ServiceServer srvGetQRPose;
 
 //parameter stuff
 customparameter::ParameterHandler* parameterHandler;
+customparameter::Parameter<std::string> paramCameraBaseTopic;
 customparameter::Parameter<int> paramRefreshRate;
+customparameter::Parameter<bool> paramServiceMode;
 
 //zbar stuff
 using namespace zbar;
@@ -54,6 +60,15 @@ void setQrCodesData(std::vector<image_data> data)
     _mutex->unlock();
 }
 
+std::vector<image_data> getQrCodesData()
+{
+    _mutex->lock();
+    std::vector<image_data> qrCodesData = std::vector<image_data>(*_qrCodesData);
+    _mutex->unlock();
+
+    return qrCodesData;
+}
+
 
 void InitParams()
 {
@@ -62,6 +77,8 @@ void InitParams()
     std::string subNamespace = "";
     //Standard params
     paramRefreshRate = parameterHandler->AddParameter("RefreshRate", "", (int)1);
+    paramServiceMode = parameterHandler->AddParameter("ServiceMode", "", false);
+    paramCameraBaseTopic = parameterHandler->AddParameter("CameraBaseTopic", "", std::string("/zed/"));
 }
 
 void InitZBar()
@@ -104,7 +121,15 @@ void ProcessRawString(std::string rawString, image_data* retData)
 }
 
 boost::mutex mutexImage;
-Image* currentZbarImage;
+Image* _currentZbarImage;
+Image GetZbarImage()
+{
+    mutexImage.lock();
+    Image image = Image(*_currentZbarImage);
+    mutexImage.unlock();
+    return image;
+}
+
 sensor_msgs::Image currentImageMsg;
 void imageCallback(const sensor_msgs::Image::ConstPtr& msg)
 {
@@ -112,38 +137,57 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg)
     cv_image = cv_bridge::toCvShare(msg, "mono8");
 
     mutexImage.lock();
-    //clean old data
-    if(currentZbarImage)
-    {
-        //clean up if needed
-        currentZbarImage->set_data(NULL, 0);
-    }
-
-    currentZbarImage = new Image((unsigned  int)cv_image->image.cols, (unsigned  int)cv_image->image.rows, "Y800",
+    //TODO: Check if memory leaks!
+    _currentZbarImage = new Image((unsigned  int)cv_image->image.cols, (unsigned  int)cv_image->image.rows, "Y800",
                      cv_image->image.data, (unsigned  int)(cv_image->image.cols * cv_image->image.rows));
+
     currentImageMsg = *msg;
     mutexImage.unlock();
 }
 
 boost::mutex mutexDepth;
-sensor_msgs::PointCloud2 currentDepthMsg;
+sensor_msgs::PointCloud2 _currentDepthMsg;
 void deptCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& msg)
 {
     mutexDepth.lock();
-    currentDepthMsg = *msg;
+    _currentDepthMsg = *msg;
     mutexDepth.unlock();
 }
 
+sensor_msgs::PointCloud2 getDepthMsg()
+{
+    mutexDepth.lock();
+    sensor_msgs::PointCloud2  depthMsg = sensor_msgs::PointCloud2(_currentDepthMsg);
+    mutexDepth.unlock();
+    return depthMsg;
+}
 
+boost::mutex mutexCameraInfo;
+sensor_msgs::CameraInfo _currentCameraInfo;
+void cameraInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& msg)
+{
+    mutexCameraInfo.lock();
+    _currentCameraInfo = *msg;
+    mutexCameraInfo.unlock();
+}
+
+sensor_msgs::CameraInfo GetCameraInfo()
+{
+    mutexCameraInfo.lock();
+    sensor_msgs::CameraInfo cameraInfo = sensor_msgs::CameraInfo(_currentCameraInfo);
+    mutexCameraInfo.unlock();
+    return cameraInfo;
+}
+
+bool isProcessing = false;
 void ScanCurrentImg()
 {
+    isProcessing = true;
     std::vector<image_data> qrCodes;
 
-    mutexImage.lock();
-    Image *image = new Image(*currentZbarImage);
-    mutexImage.unlock();
+    Image image = GetZbarImage();
 
-    int res = imgScanner.scan(*image);
+    int res = imgScanner.scan(image);
 
     if(res == -1)
     {
@@ -153,7 +197,7 @@ void ScanCurrentImg()
     {
         //extract symbol information
         int counter = 0;
-        for(Image::SymbolIterator symbol = image->symbol_begin(); symbol != image->symbol_end(); ++symbol)
+        for(Image::SymbolIterator symbol = image.symbol_begin(); symbol !=  image.symbol_end(); ++symbol)
         {
             std::string test = symbol->get_data();
 
@@ -167,7 +211,7 @@ void ScanCurrentImg()
             counter += 1;
         }
 
-        //print res
+        //print res TODO: drop after debugphase
         ROS_INFO_STREAM("Decoded " << res << " QRCodes");
         for(int i = 0; i < qrCodes.size(); i++)
         {
@@ -176,10 +220,27 @@ void ScanCurrentImg()
 
         setQrCodesData(qrCodes);
     }
+    isProcessing = false;
+}
 
-    //clean up date
-    imgScanner.recycle_image(*image);
-    image->set_data(NULL, 0);
+void FuseInformation()
+{
+    auto qrCodes = getQrCodesData();
+    //sensor_msgs::PointCloud2 depthMsg = getCurrentDepthMsg();
+    if(qrCodes.size() > 0)
+    {
+    }
+
+}
+
+bool GetQRPoseService(qrcode_referencer::GetQRPoseRequest &request, qrcode_referencer::GetQRPoseResponse &response)
+{
+    bool res = false;
+
+
+
+
+    return res;
 }
 
 int main(int argc, char **argv)
@@ -188,21 +249,37 @@ int main(int argc, char **argv)
     node = new ros::NodeHandle(nodeName);
 
     Init();
-
-    subImageMessage = node->subscribe("/zed/right/image_rect_color", 1, imageCallback);
-    subDepthImageMessage = node->subscribe("/zed/depth/depth_registered", 1, deptCloudCallback);
+    subCameraInfo = node->subscribe(paramCameraBaseTopic.GetValue() + "depth/camera_info", 1, cameraInfoCallback);
+    ROS_INFO_STREAM("Listening to CameraInfo-Topic: " << subCameraInfo.getTopic());
+    subImageMessage = node->subscribe(paramCameraBaseTopic.GetValue() + "right/image_rect_color", 1, imageCallback);
+    ROS_INFO_STREAM("Listening to RGBImage-Topic: " << subImageMessage.getTopic());
+    subDepthImageMessage = node->subscribe(paramCameraBaseTopic.GetValue() + "depth/depth_registered", 1, deptCloudCallback);
+    ROS_INFO_STREAM("Listening to DepthImage-Topic: " << subDepthImageMessage.getTopic());
 
     ros::Rate rate(paramRefreshRate.GetValue());
-    while(node->ok())
-    {        
-        ros::spinOnce();
 
-        if(currentZbarImage)
+    if (paramServiceMode.GetValue())
+    {
+        srvGetQRPose = node->advertiseService("GetQRPose", GetQRPoseService);
+        ROS_INFO("Ready to derive QRCode-Poses");
+
+        ros::spin();
+    }
+    else
+    {
+        while(node->ok())
         {
-            ScanCurrentImg();
-        }
+            ros::spinOnce();
 
-        rate.sleep();        
+            //continously scann image
+            if(_currentZbarImage)
+            {
+                ScanCurrentImg();
+                FuseInformation();
+            }
+
+            rate.sleep();
+        }
     }
     return 0;
 }

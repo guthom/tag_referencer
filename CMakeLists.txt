@@ -54,10 +54,10 @@ find_package(catkin REQUIRED
 #)
 
 #add all services
-#add_service_files(
-#    FILES
-#    ${SERVICES}
-#)
+add_service_files(
+    FILES
+    ${SERVICES}
+)
 
 #generate messages 
 generate_messages(
