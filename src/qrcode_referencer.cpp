@@ -38,6 +38,7 @@ ros::Subscriber subCameraInfo;
 ros::Subscriber subImageMessage;
 ros::Subscriber subDepthImageMessage;
 ros::Publisher pubScannedImage;
+ros::Publisher pubMarkedPointCloud;
 ros::ServiceServer srvGetQRPose;
 
 //parameter stuff
@@ -47,6 +48,7 @@ customparameter::Parameter<int> paramRefreshRate;
 customparameter::Parameter<int> paramReferenceCorner;
 customparameter::Parameter<bool> paramServiceMode;
 customparameter::Parameter<bool> paramPublishMarkedImage;
+customparameter::Parameter<bool> paramPublishMarkedPointCloud;
 
 //zbar stuff
 using namespace zbar;
@@ -81,6 +83,7 @@ void InitParams()
     paramRefreshRate = parameterHandler->AddParameter("RefreshRate", "", (int)1);
     paramReferenceCorner = parameterHandler->AddParameter("ReferenceCorner", "", (int)1);
     paramServiceMode = parameterHandler->AddParameter("ServiceMode", "", false);
+    paramPublishMarkedPointCloud = parameterHandler->AddParameter("PublishMarkedPointCloud", "", true);
     paramPublishMarkedImage = parameterHandler->AddParameter("PublishMarkedImage", "", true);
     paramCameraBaseTopic = parameterHandler->AddParameter("CameraBaseTopic", "", std::string("/zed/"));
 }
@@ -145,7 +148,6 @@ sensor_msgs::Image GetImageMsg()
     mutexImage.unlock();
     return image;
 }
-
 
 void imageCallback(const sensor_msgs::Image::ConstPtr& msg)
 {
@@ -318,11 +320,18 @@ void FuseInformation()
             cv::Point3i point;
             point.x = qrCodesData[i].points[i].x;
             point.y = qrCodesData[i].points[i].y;
+            int dataPointer = point.x + ((point.y-1) * depthMsg.width);
+            unsigned int depthValue = depthMsg.data[dataPointer];
             point.z = qrCodesData[i].points[i].x;
 
             qrCodesData[i].points3D.push_back(point);
-
         }
+    }
+
+    //publish MarkedPointCloud
+    if(paramPublishMarkedPointCloud.GetValue())
+    {
+        pubMarkedPointCloud.publish(depthMsg);
     }
 }
 
@@ -361,6 +370,9 @@ int main(int argc, char **argv)
 
     pubScannedImage = node->advertise<sensor_msgs::Image>("ScannedImage", 100);
     ROS_INFO_STREAM("Will publish ScannedImages to " << pubScannedImage.getTopic());
+
+    pubMarkedPointCloud = node->advertise<sensor_msgs::PointCloud2>("MarkedPointCloud", 100);
+    ROS_INFO_STREAM("Will publish marked Pointclouds to " << pubMarkedPointCloud.getTopic());
 
     ros::Rate rate(paramRefreshRate.GetValue());
 
