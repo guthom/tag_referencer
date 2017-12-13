@@ -31,14 +31,12 @@ struct image_data{
 //common stuff
 std::string nodeName = "qrcode_referencer";
 
-//boost stuff
-boost::mutex* _mutex;
-
 //ros sutff
 ros::NodeHandle* node;
 ros::Subscriber subCameraInfo;
 ros::Subscriber subImageMessage;
 ros::Subscriber subDepthImageMessage;
+ros::Publisher pubScannedImage;
 ros::ServiceServer srvGetQRPose;
 
 //parameter stuff
@@ -52,19 +50,20 @@ using namespace zbar;
 ImageScanner imgScanner;
 
 //qrCode data
-std::vector<image_data>* _qrCodesData;
+static boost::mutex _dataMutex;
+std::vector<image_data> _qrCodesData;
 void setQrCodesData(std::vector<image_data> data)
 {
-    _mutex->lock();
-    _qrCodesData = &data;
-    _mutex->unlock();
+    _dataMutex.lock();
+    _qrCodesData = data;
+    _dataMutex.unlock();
 }
 
 std::vector<image_data> getQrCodesData()
 {
-    _mutex->lock();
-    std::vector<image_data> qrCodesData = std::vector<image_data>(*_qrCodesData);
-    _mutex->unlock();
+    _dataMutex.lock();
+    std::vector<image_data> qrCodesData = std::vector<image_data>(_qrCodesData);
+    _dataMutex.unlock();
 
     return qrCodesData;
 }
@@ -85,13 +84,6 @@ void InitZBar()
 {
     //TODO: maybe theres a better parameterset for the configuration
     imgScanner.set_config(ZBAR_QRCODE, ZBAR_CFG_ENABLE, 1);
-}
-
-void Init()
-{
-    _mutex = new boost::mutex();
-    InitParams();
-    InitZBar();
 }
 
 void ProcessRawString(std::string rawString, image_data* retData)
@@ -120,8 +112,8 @@ void ProcessRawString(std::string rawString, image_data* retData)
     }
 }
 
-boost::mutex mutexImage;
-Image* _currentZbarImage;
+static boost::mutex mutexImage;
+Image* _currentZbarImage = new Image();
 Image GetZbarImage()
 {
     mutexImage.lock();
@@ -130,31 +122,51 @@ Image GetZbarImage()
     return image;
 }
 
-sensor_msgs::Image currentImageMsg;
+cv::Mat _cvImage;
+cv::Mat GetCvImage()
+{
+    mutexImage.lock();
+    cv::Mat image = cv::Mat(_cvImage);
+    mutexImage.unlock();
+    return image;
+}
+
+sensor_msgs::Image _currentImageMsg;
+sensor_msgs::Image GetImageMsg()
+{
+    mutexImage.lock();
+    sensor_msgs::Image image = sensor_msgs::Image(_currentImageMsg);
+    mutexImage.unlock();
+    return image;
+}
+
+
 void imageCallback(const sensor_msgs::Image::ConstPtr& msg)
 {
-    cv_bridge::CvImageConstPtr cv_image;
-    cv_image = cv_bridge::toCvShare(msg, "mono8");
+    cv_bridge::CvImageConstPtr cvImage = cv_bridge::toCvShare(msg, "mono8");
 
     mutexImage.lock();
-    //TODO: Check if memory leaks!
-    _currentZbarImage = new Image((unsigned  int)cv_image->image.cols, (unsigned  int)cv_image->image.rows, "Y800",
-                     cv_image->image.data, (unsigned  int)(cv_image->image.cols * cv_image->image.rows));
 
-    currentImageMsg = *msg;
+    _cvImage = cv::Mat(cvImage->image);
+
+    //TODO: Check if memory leaks!
+    _currentZbarImage = new Image((unsigned  int)cvImage->image.cols, (unsigned  int)cvImage->image.rows, "Y800",
+                     cvImage->image.data, (unsigned  int)(cvImage->image.cols * cvImage->image.rows));
+
+    _currentImageMsg = *msg;
+
     mutexImage.unlock();
 }
 
-boost::mutex mutexDepth;
+static boost::mutex mutexDepth;
 sensor_msgs::PointCloud2 _currentDepthMsg;
-void deptCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& msg)
+void depthCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& msg)
 {
     mutexDepth.lock();
     _currentDepthMsg = *msg;
     mutexDepth.unlock();
 }
-
-sensor_msgs::PointCloud2 getDepthMsg()
+sensor_msgs::PointCloud2 GetDepthMsg()
 {
     mutexDepth.lock();
     sensor_msgs::PointCloud2  depthMsg = sensor_msgs::PointCloud2(_currentDepthMsg);
@@ -162,12 +174,12 @@ sensor_msgs::PointCloud2 getDepthMsg()
     return depthMsg;
 }
 
-boost::mutex mutexCameraInfo;
+static boost::mutex mutexCameraInfo;
 sensor_msgs::CameraInfo _currentCameraInfo;
-void cameraInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& msg)
+void cameraInfoCallback(const sensor_msgs::CameraInfo msg)
 {
     mutexCameraInfo.lock();
-    _currentCameraInfo = *msg;
+    _currentCameraInfo = msg;
     mutexCameraInfo.unlock();
 }
 
@@ -177,6 +189,13 @@ sensor_msgs::CameraInfo GetCameraInfo()
     sensor_msgs::CameraInfo cameraInfo = sensor_msgs::CameraInfo(_currentCameraInfo);
     mutexCameraInfo.unlock();
     return cameraInfo;
+}
+
+
+void MarkImage(cv_bridge::CvImageConstPtr cvImage)
+{
+
+
 }
 
 bool isProcessing = false;
@@ -220,6 +239,7 @@ void ScanCurrentImg()
 
         setQrCodesData(qrCodes);
     }
+
     isProcessing = false;
 }
 
@@ -243,18 +263,29 @@ bool GetQRPoseService(qrcode_referencer::GetQRPoseRequest &request, qrcode_refer
     return res;
 }
 
+void Init()
+{
+    InitParams();
+    InitZBar();
+}
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, nodeName);
     node = new ros::NodeHandle(nodeName);
 
     Init();
+
+    //define subcriber
     subCameraInfo = node->subscribe(paramCameraBaseTopic.GetValue() + "depth/camera_info", 1, cameraInfoCallback);
     ROS_INFO_STREAM("Listening to CameraInfo-Topic: " << subCameraInfo.getTopic());
     subImageMessage = node->subscribe(paramCameraBaseTopic.GetValue() + "right/image_rect_color", 1, imageCallback);
     ROS_INFO_STREAM("Listening to RGBImage-Topic: " << subImageMessage.getTopic());
-    subDepthImageMessage = node->subscribe(paramCameraBaseTopic.GetValue() + "depth/depth_registered", 1, deptCloudCallback);
+    subDepthImageMessage = node->subscribe(paramCameraBaseTopic.GetValue() + "depth/depth_registered", 1, depthCloudCallback);
     ROS_INFO_STREAM("Listening to DepthImage-Topic: " << subDepthImageMessage.getTopic());
+
+    pubScannedImage = node->advertise<sensor_msgs::Image>("ScannedImage", 100);
+    ROS_INFO_STREAM("Will publish ScannedImages to " << pubScannedImage.getTopic());
 
     ros::Rate rate(paramRefreshRate.GetValue());
 
