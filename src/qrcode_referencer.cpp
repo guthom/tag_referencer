@@ -17,13 +17,18 @@
 #include <boost/thread.hpp>
 #include <boost/algorithm/string.hpp>
 
+struct point2d
+{
+    int x;
+    int y;
+};
+
 struct image_data{
     bool success = false;
     int id;
     std::string info = "";
     std::string frameName = "";
-    int pixX = 0;
-    int pixY = 0;
+    std::vector<point2d> points;
     geometry_msgs::Pose framePose;
     geometry_msgs::Pose qrPose;
 };
@@ -223,17 +228,37 @@ void MarkImage()
     cv::Mat image = GetCvImage();
     for (int i = 0; i < qrCodesData.size(); i++)
     {
-        Point center = Point(qrCodesData[i].pixX, qrCodesData[i].pixY);
-        circle(image, center, 5 , Scalar( 255, 0, 0), 4);
-
+        Point center = Point(qrCodesData[i].points[0].x, qrCodesData[i].points[0].y);
         center.x += 10;
         center.y -= 5;
         //set text with frame name
         std::string text = "ID:" + std::to_string(qrCodesData[i].id) + " " + qrCodesData[i].frameName;
         putText(image, text ,center, FONT_HERSHEY_SIMPLEX, 0.8, Scalar( 255, 0, 0) ,2, LINE_AA);
+
+        for (int j = 0; j < qrCodesData[i].points.size(); j++)
+        {
+            center = Point(qrCodesData[i].points[j].x, qrCodesData[i].points[j].y);
+            circle(image, center, 5 , Scalar( 255, 0, 0), 4);
+
+            if(j < qrCodesData[i].points.size() -1)
+            {
+                Point p2 = Point(qrCodesData[i].points[j+1].x, qrCodesData[i].points[j+1].y);
+                line(image, center, p2, Scalar( 0, 255, 0), 2, 8);
+            }
+        }
+
+        //draw last line
+        Point p2 = Point(qrCodesData[i].points[0].x, qrCodesData[i].points[0].y);
+        line(image, center, p2, Scalar( 0, 255, 0), 2, 8);
+
     }
 
     PublishMarkedImage(image);
+}
+
+void SortPoints(std::vector<point2d> points)
+{
+
 }
 
 bool isProcessing = false;
@@ -256,13 +281,21 @@ void ScanCurrentImg()
         int counter = 0;
         for(Image::SymbolIterator symbol = image.symbol_begin(); symbol !=  image.symbol_end(); ++symbol)
         {
-            std::string test = symbol->get_data();
-
             image_data entry;
             ProcessRawString(symbol->get_data().c_str(), &entry);
 
-            entry.pixX = symbol->get_location_x(counter);
-            entry.pixY = symbol->get_location_y(counter);
+            //run through all detected points
+            std::vector<point2d> points;
+            for(int i = 0; i < symbol->get_location_size(); i++)
+            {
+                point2d point;
+                point.x = symbol->get_location_x(i);
+                point.y = symbol->get_location_y(i);
+                points.push_back(point);
+            }
+
+            SortPoints(points);
+            entry.points = points;
 
             qrCodes.push_back(entry);
             counter += 1;
