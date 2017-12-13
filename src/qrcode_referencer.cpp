@@ -59,7 +59,7 @@ void setQrCodesData(std::vector<image_data> data)
     _dataMutex.unlock();
 }
 
-std::vector<image_data> getQrCodesData()
+std::vector<image_data> GetQrCodesData()
 {
     _dataMutex.lock();
     std::vector<image_data> qrCodesData = std::vector<image_data>(_qrCodesData);
@@ -122,6 +122,7 @@ Image GetZbarImage()
     return image;
 }
 
+//TODO: Use cvBridge only!
 cv::Mat _cvImage;
 cv::Mat GetCvImage()
 {
@@ -143,15 +144,19 @@ sensor_msgs::Image GetImageMsg()
 
 void imageCallback(const sensor_msgs::Image::ConstPtr& msg)
 {
-    cv_bridge::CvImageConstPtr cvImage = cv_bridge::toCvShare(msg, "mono8");
+    cv_bridge::CvImageConstPtr cvImage = cv_bridge::toCvShare(msg, sensor_msgs::image_encodings::RGB8);
 
     mutexImage.lock();
 
     _cvImage = cv::Mat(cvImage->image);
 
+    cv::Mat grayImage;
+
+    cv::cvtColor(cvImage->image, grayImage, CV_RGB2GRAY);
+
     //TODO: Check if memory leaks!
-    _currentZbarImage = new Image((unsigned  int)cvImage->image.cols, (unsigned  int)cvImage->image.rows, "Y800",
-                     cvImage->image.data, (unsigned  int)(cvImage->image.cols * cvImage->image.rows));
+    _currentZbarImage = new Image((unsigned  int)grayImage.cols, (unsigned  int)grayImage.rows, "Y800",
+                                  grayImage.data, (unsigned  int)(grayImage.cols * cvImage->image.rows));
 
     _currentImageMsg = *msg;
 
@@ -191,11 +196,41 @@ sensor_msgs::CameraInfo GetCameraInfo()
     return cameraInfo;
 }
 
-
-void MarkImage(cv_bridge::CvImageConstPtr cvImage)
+void PublishMarkedImage(cv::Mat image)
 {
+    using namespace cv_bridge;
+    std_msgs::Header header;
+    header.stamp = ros::Time::now();
+    CvImage imageBridge = CvImage(header, sensor_msgs::image_encodings::RGB8, image);
 
+    sensor_msgs::Image imgMsg;
+    imageBridge.toImageMsg(imgMsg);
+    pubScannedImage.publish(imgMsg);
 
+}
+
+void MarkImage()
+{
+    using namespace cv;
+    auto qrCodesData = GetQrCodesData();
+    if (qrCodesData.size() <= 0)
+    {
+        return;
+    }
+
+    cv::Mat image = GetCvImage();
+    for (int i = 0; i < qrCodesData.size(); i++)
+    {
+        Point center = Point(qrCodesData[i].pixX, qrCodesData[i].pixY);
+        circle(image, center, 5 , Scalar( 255, 0, 0), 4);
+
+        center.x += 10;
+        center.y -= 5;
+        //set text with frame name
+        putText(image, qrCodesData[i].frameName ,center, FONT_HERSHEY_SIMPLEX, 1, Scalar( 255, 0, 0) ,2, LINE_AA);
+    }
+
+    PublishMarkedImage(image);
 }
 
 bool isProcessing = false;
@@ -241,11 +276,12 @@ void ScanCurrentImg()
     }
 
     isProcessing = false;
+
 }
 
 void FuseInformation()
 {
-    auto qrCodes = getQrCodesData();
+    auto qrCodes = GetQrCodesData();
     //sensor_msgs::PointCloud2 depthMsg = getCurrentDepthMsg();
     if(qrCodes.size() > 0)
     {
@@ -307,6 +343,7 @@ int main(int argc, char **argv)
             {
                 ScanCurrentImg();
                 FuseInformation();
+                MarkImage();
             }
 
             rate.sleep();
