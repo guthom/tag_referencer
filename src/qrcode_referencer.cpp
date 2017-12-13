@@ -229,7 +229,8 @@ void MarkImage()
         center.x += 10;
         center.y -= 5;
         //set text with frame name
-        putText(image, qrCodesData[i].frameName ,center, FONT_HERSHEY_SIMPLEX, 1, Scalar( 255, 0, 0) ,2, LINE_AA);
+        std::string text = "ID:" + std::to_string(qrCodesData[i].id) + " " + qrCodesData[i].frameName;
+        putText(image, text ,center, FONT_HERSHEY_SIMPLEX, 0.8, Scalar( 255, 0, 0) ,2, LINE_AA);
     }
 
     PublishMarkedImage(image);
@@ -265,13 +266,6 @@ void ScanCurrentImg()
 
             qrCodes.push_back(entry);
             counter += 1;
-        }
-
-        //print res TODO: drop after debugphase
-        ROS_INFO_STREAM("Decoded " << res << " QRCodes");
-        for(int i = 0; i < qrCodes.size(); i++)
-        {
-            ROS_INFO_STREAM(qrCodes[i].frameName + "; "<< qrCodes[i].pixY << "; " << qrCodes[i].pixX);
         }
 
         setQrCodesData(qrCodes);
