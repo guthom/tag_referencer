@@ -236,6 +236,10 @@ void MarkImage()
         std::string text = "ID:" + std::to_string(qrCodesData[i].id) + " " + qrCodesData[i].frameName;
         putText(image, text ,center, FONT_HERSHEY_SIMPLEX, 0.8, Scalar( 255, 0, 0) ,2, LINE_AA);
 
+        //visualize our Refernce -> Point 1
+        center = Point(qrCodesData[i].points[1].x, qrCodesData[i].points[1].y);
+        circle(image, center, 15 , Scalar( 0, 0, 255), 4);
+
         for (int j = 0; j < qrCodesData[i].points.size(); j++)
         {
             center = Point(qrCodesData[i].points[j].x, qrCodesData[i].points[j].y);
