@@ -228,9 +228,10 @@ void MarkImage()
     cv::Mat image = GetCvImage();
     for (int i = 0; i < qrCodesData.size(); i++)
     {
-        Point center = Point(qrCodesData[i].points[0].x, qrCodesData[i].points[0].y);
-        center.x += 10;
-        center.y -= 5;
+        Point center = Point(qrCodesData[i].points[3].x, qrCodesData[i].points[3].y);
+        center.x += 25;
+        center.y += 0;
+
         //set text with frame name
         std::string text = "ID:" + std::to_string(qrCodesData[i].id) + " " + qrCodesData[i].frameName;
         putText(image, text ,center, FONT_HERSHEY_SIMPLEX, 0.8, Scalar( 255, 0, 0) ,2, LINE_AA);
@@ -240,6 +241,7 @@ void MarkImage()
             center = Point(qrCodesData[i].points[j].x, qrCodesData[i].points[j].y);
             circle(image, center, 5 , Scalar( 255, 0, 0), 4);
 
+            putText(image, std::to_string(j)  ,center, FONT_HERSHEY_SIMPLEX, 0.8, Scalar( 255, 0, 0) ,2, LINE_AA);
             if(j < qrCodesData[i].points.size() -1)
             {
                 Point p2 = Point(qrCodesData[i].points[j+1].x, qrCodesData[i].points[j+1].y);
@@ -250,15 +252,9 @@ void MarkImage()
         //draw last line
         Point p2 = Point(qrCodesData[i].points[0].x, qrCodesData[i].points[0].y);
         line(image, center, p2, Scalar( 0, 255, 0), 2, 8);
-
     }
 
     PublishMarkedImage(image);
-}
-
-void SortPoints(std::vector<point2d> points)
-{
-
 }
 
 bool isProcessing = false;
@@ -294,7 +290,6 @@ void ScanCurrentImg()
                 points.push_back(point);
             }
 
-            SortPoints(points);
             entry.points = points;
 
             qrCodes.push_back(entry);
