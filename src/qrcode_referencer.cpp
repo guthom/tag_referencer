@@ -44,6 +44,7 @@ customparameter::ParameterHandler* parameterHandler;
 customparameter::Parameter<std::string> paramCameraBaseTopic;
 customparameter::Parameter<int> paramRefreshRate;
 customparameter::Parameter<bool> paramServiceMode;
+customparameter::Parameter<bool> paramPublishMarkedImage;
 
 //zbar stuff
 using namespace zbar;
@@ -77,6 +78,7 @@ void InitParams()
     //Standard params
     paramRefreshRate = parameterHandler->AddParameter("RefreshRate", "", (int)1);
     paramServiceMode = parameterHandler->AddParameter("ServiceMode", "", false);
+    paramPublishMarkedImage = parameterHandler->AddParameter("PublishMarkedImage", "", true);
     paramCameraBaseTopic = parameterHandler->AddParameter("CameraBaseTopic", "", std::string("/zed/"));
 }
 
@@ -305,6 +307,8 @@ void Init()
     InitZBar();
 }
 
+//used to save a lot of ifs every cycle
+std::vector<void (*)()> processingFunctions;
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, nodeName);
@@ -334,16 +338,27 @@ int main(int argc, char **argv)
     }
     else
     {
+        //define processing functions
+        processingFunctions.push_back(ScanCurrentImg);
+        processingFunctions.push_back(FuseInformation);
+
+        if(paramPublishMarkedImage.GetValue())
+        {
+            processingFunctions.push_back(MarkImage);
+        }
+
         while(node->ok())
         {
             ros::spinOnce();
 
-            //continously scann image
+            //continuously scann image
             if(_currentZbarImage)
             {
-                ScanCurrentImg();
-                FuseInformation();
-                MarkImage();
+                for(int i = 0; i < processingFunctions.size(); i++)
+                {
+                    //execute added functions
+                    (*processingFunctions[i])();
+                }
             }
 
             rate.sleep();
