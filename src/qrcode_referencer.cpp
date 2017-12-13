@@ -17,18 +17,14 @@
 #include <boost/thread.hpp>
 #include <boost/algorithm/string.hpp>
 
-struct point2d
-{
-    int x;
-    int y;
-};
 
 struct image_data{
     bool success = false;
     int id;
     std::string info = "";
     std::string frameName = "";
-    std::vector<point2d> points;
+    std::vector<cv::Point2i> points;
+    std::vector<cv::Point3i> points3D;
     geometry_msgs::Pose framePose;
     geometry_msgs::Pose qrPose;
 };
@@ -48,6 +44,7 @@ ros::ServiceServer srvGetQRPose;
 customparameter::ParameterHandler* parameterHandler;
 customparameter::Parameter<std::string> paramCameraBaseTopic;
 customparameter::Parameter<int> paramRefreshRate;
+customparameter::Parameter<int> paramReferenceCorner;
 customparameter::Parameter<bool> paramServiceMode;
 customparameter::Parameter<bool> paramPublishMarkedImage;
 
@@ -82,6 +79,7 @@ void InitParams()
     std::string subNamespace = "";
     //Standard params
     paramRefreshRate = parameterHandler->AddParameter("RefreshRate", "", (int)1);
+    paramReferenceCorner = parameterHandler->AddParameter("ReferenceCorner", "", (int)1);
     paramServiceMode = parameterHandler->AddParameter("ServiceMode", "", false);
     paramPublishMarkedImage = parameterHandler->AddParameter("PublishMarkedImage", "", true);
     paramCameraBaseTopic = parameterHandler->AddParameter("CameraBaseTopic", "", std::string("/zed/"));
@@ -226,6 +224,7 @@ void MarkImage()
     }
 
     cv::Mat image = GetCvImage();
+    int referenceCorner = paramReferenceCorner.GetValue();
     for (int i = 0; i < qrCodesData.size(); i++)
     {
         Point center = Point(qrCodesData[i].points[3].x, qrCodesData[i].points[3].y);
@@ -236,8 +235,8 @@ void MarkImage()
         std::string text = "ID:" + std::to_string(qrCodesData[i].id) + " " + qrCodesData[i].frameName;
         putText(image, text ,center, FONT_HERSHEY_SIMPLEX, 0.8, Scalar( 255, 0, 0) ,2, LINE_AA);
 
-        //visualize our Refernce -> Point 1
-        center = Point(qrCodesData[i].points[1].x, qrCodesData[i].points[1].y);
+        //visualize our Refernce
+        center = Point(qrCodesData[i].points[referenceCorner].x, qrCodesData[i].points[referenceCorner].y);
         circle(image, center, 15 , Scalar( 0, 0, 255), 4);
 
         for (int j = 0; j < qrCodesData[i].points.size(); j++)
@@ -285,10 +284,10 @@ void ScanCurrentImg()
             ProcessRawString(symbol->get_data().c_str(), &entry);
 
             //run through all detected points
-            std::vector<point2d> points;
+            std::vector<cv::Point> points;
             for(int i = 0; i < symbol->get_location_size(); i++)
             {
-                point2d point;
+                cv::Point point;
                 point.x = symbol->get_location_x(i);
                 point.y = symbol->get_location_y(i);
                 points.push_back(point);
@@ -309,12 +308,22 @@ void ScanCurrentImg()
 
 void FuseInformation()
 {
-    auto qrCodes = GetQrCodesData();
-    //sensor_msgs::PointCloud2 depthMsg = getCurrentDepthMsg();
-    if(qrCodes.size() > 0)
-    {
-    }
+    auto qrCodesData = GetQrCodesData();
+    sensor_msgs::PointCloud2 depthMsg = GetDepthMsg();
 
+    for (int i = 0; i < qrCodesData.size(); i++)
+    {
+        for (int j = 0; j < qrCodesData[i].points.size(); j++)
+        {
+            cv::Point3i point;
+            point.x = qrCodesData[i].points[i].x;
+            point.y = qrCodesData[i].points[i].y;
+            point.z = qrCodesData[i].points[i].x;
+
+            qrCodesData[i].points3D.push_back(point);
+
+        }
+    }
 }
 
 bool GetQRPoseService(qrcode_referencer::GetQRPoseRequest &request, qrcode_referencer::GetQRPoseResponse &response)
@@ -347,7 +356,7 @@ int main(int argc, char **argv)
     ROS_INFO_STREAM("Listening to CameraInfo-Topic: " << subCameraInfo.getTopic());
     subImageMessage = node->subscribe(paramCameraBaseTopic.GetValue() + "right/image_rect_color", 1, imageCallback);
     ROS_INFO_STREAM("Listening to RGBImage-Topic: " << subImageMessage.getTopic());
-    subDepthImageMessage = node->subscribe(paramCameraBaseTopic.GetValue() + "depth/depth_registered", 1, depthCloudCallback);
+    subDepthImageMessage = node->subscribe(paramCameraBaseTopic.GetValue() + "/point_cloud/cloud_registered", 1, depthCloudCallback);
     ROS_INFO_STREAM("Listening to DepthImage-Topic: " << subDepthImageMessage.getTopic());
 
     pubScannedImage = node->advertise<sensor_msgs::Image>("ScannedImage", 100);
