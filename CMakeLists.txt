@@ -44,7 +44,9 @@ find_package(catkin REQUIRED
     tf2
     tf2_ros
     cv_bridge
+    OpenCV
     custom_parameter
+    pcl_conversions
     )
 
 #add all message files
