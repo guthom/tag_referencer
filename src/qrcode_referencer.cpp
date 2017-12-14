@@ -7,6 +7,7 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/PoseArray.h>
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
@@ -161,16 +162,18 @@ void PublishMarkedImage(cv::Mat image)
 
 }
 
-void PublishDebugPose(QRCodeData qrCode)
+void PublishDebugPose(std::vector<QRCodeData> qrCodes)
 {
-    geometry_msgs::PoseStamped msg;
-    msg.pose = qrCode.qrPose;
-
+    geometry_msgs::PoseArray msg;
     std_msgs::Header header;
     header.stamp = ros::Time::now();
     msg.header = header;
-    msg.header.frame_id = qrCode.cameraFrameID;
+    msg.header.frame_id = qrCodes[0].cameraFrameID;
 
+    for(int i = 0; i < qrCodes.size(); i++)
+    {
+        msg.poses.push_back(qrCodes[i].qrPose);
+    }
     pubDebugPose.publish(msg);
 }
 
@@ -212,7 +215,7 @@ void FuseInformation()
     pcl_conversions::moveToPCL(depthMsg, pclCloud);
 
     qrCodesData = _poseDerivator.CalculateQRPose(qrCodesData, pclCloud, paramReferenceCorner.GetValue());
-    PublishDebugPose(qrCodesData[0]);
+    PublishDebugPose(qrCodesData);
 
     //publish MarkedPointCloud
     //TODO: Use MarkPointCloud instead
@@ -260,7 +263,7 @@ int main(int argc, char **argv)
     pubMarkedPointCloud = node->advertise<sensor_msgs::PointCloud2>("MarkedPointCloud", 100);
     ROS_INFO_STREAM("Will publish marked Pointclouds to " << pubMarkedPointCloud.getTopic());
 
-    pubDebugPose = node->advertise<geometry_msgs::PoseStamped>("DebugPose", 100);
+    pubDebugPose = node->advertise<geometry_msgs::PoseArray>("DebugPose", 100);
 
     ros::Rate rate(paramRefreshRate.GetValue());
 
