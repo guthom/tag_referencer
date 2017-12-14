@@ -7,16 +7,17 @@
 #include <cv_bridge/cv_bridge.h>
 #include <geometry_msgs/Pose.h>
 
-class ImageData
+class QRCodeData
 {
 public:
-    ImageData();
+    QRCodeData();
 
-    ~ImageData();
+    ~QRCodeData();
 
 public:
     bool success = false;
     int id;
+    int refrenceCounter = 1;
     std::string info = "";
     std::string frameName = "";
     std::vector<cv::Point2i> points;

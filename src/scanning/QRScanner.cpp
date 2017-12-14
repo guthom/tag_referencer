@@ -37,7 +37,7 @@ zbar::Image* QRScanner::CreateZBarImage(cv::Mat* image)
 /// \param referenceCorner Number of the used reference corner for the final frame
 /// \param image raw cv::Mat image to draw on
 /// \return cv::Mat image with drawn qr code data
-cv::Mat QRScanner::MarkImage(std::vector<ImageData> qrCodesData, int referenceCorner, cv::Mat image)
+cv::Mat QRScanner::MarkImage(std::vector<QRCodeData> qrCodesData, int referenceCorner, cv::Mat image)
 {
     using namespace cv;
 
@@ -81,7 +81,7 @@ cv::Mat QRScanner::MarkImage(std::vector<ImageData> qrCodesData, int referenceCo
     return image;
 }
 
-void QRScanner::ProcessRawString(std::string rawString, ImageData* retData)
+void QRScanner::ProcessRawString(std::string rawString, QRCodeData* retData)
 {
     std::vector<std::string> qrCode;
     boost::split(qrCode, rawString, boost::is_any_of(",;[]"));
@@ -110,9 +110,9 @@ void QRScanner::ProcessRawString(std::string rawString, ImageData* retData)
 /// Scannes an cv::Mat image for QRCodes
 /// \param cvImage input cv::Mat Image to scan
 /// \return vector of ImageData objects, one object per QRCode
-std::vector<ImageData> QRScanner::ScanCurrentImg(cv::Mat cvImage)
+std::vector<QRCodeData> QRScanner::ScanCurrentImg(cv::Mat cvImage)
 {
-    std::vector<ImageData> qrCodes;
+    std::vector<QRCodeData> qrCodes;
 
     auto image = CreateZBarImage(&cvImage);
 
@@ -128,7 +128,7 @@ std::vector<ImageData> QRScanner::ScanCurrentImg(cv::Mat cvImage)
         int counter = 0;
         for(Image::SymbolIterator symbol = image->symbol_begin(); symbol !=  image->symbol_end(); ++symbol)
         {
-            ImageData entry;
+            QRCodeData entry;
             ProcessRawString(symbol->get_data().c_str(), &entry);
 
             //run through all detected points

@@ -37,7 +37,7 @@ list(APPEND LIBNAMES)
 #add libraries if needed
 SET(LIBNAME qrcode_referencer_data)
 list(APPEND LIBNAMES ${LIBNAME})
-add_library(${LIBNAME} ImageData.cpp)
+add_library(${LIBNAME} QRCodeData.cpp)
 add_dependencies(${LIBNAME} ${GLOB_DEPENDENCIES} ${LOCAL_DEPENDENCIES})
 target_link_libraries(${LIBNAME} ${GLOB_LINKLIBS} ${LOCAL_LINKLIBS}) 
 

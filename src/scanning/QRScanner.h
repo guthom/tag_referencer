@@ -5,7 +5,7 @@
 #include <string.h>
 #include "zbar.h"
 
-#include "../data/ImageData.h"
+#include "src/data/QRCodeData.h"
 
 using namespace zbar;
 using namespace cv;
@@ -16,8 +16,8 @@ class QRScanner
         QRScanner();
         ~QRScanner();
 
-        std::vector<ImageData> ScanCurrentImg(Mat cvImage);
-        cv::Mat MarkImage(std::vector<ImageData> qrCodesData, int referenceCorner, cv::Mat image);
+        std::vector<QRCodeData> ScanCurrentImg(Mat cvImage);
+        cv::Mat MarkImage(std::vector<QRCodeData> qrCodesData, int referenceCorner, cv::Mat image);
 
     private:
         //zbar stuf
@@ -25,7 +25,7 @@ class QRScanner
 
         void Init();
 
-        void ProcessRawString(std::string rawString, ImageData* retData);
+        void ProcessRawString(std::string rawString, QRCodeData* retData);
         zbar::Image* CreateZBarImage(cv::Mat* image);
 };
 

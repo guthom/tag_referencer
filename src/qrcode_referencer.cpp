@@ -14,8 +14,9 @@
 
 #include <boost/thread.hpp>
 
-#include "data/ImageData.h"
+#include "src/data/QRCodeData.h"
 #include "scanning/QRScanner.h"
+#include "transformations/PoseDerivator.h"
 
 //common stuff
 std::string nodeName = "qrcode_referencer";
@@ -40,21 +41,23 @@ customparameter::Parameter<bool> paramPublishMarkedPointCloud;
 
 //scanning stuff
 QRScanner _scanner;
+PoseDerivator _poseDerivator;
+
 
 //qrCode data
 static boost::mutex _dataMutex;
-std::vector<ImageData> _qrCodesData;
-void SetQrCodesData(std::vector<ImageData> data)
+std::vector<QRCodeData> _qrCodesData;
+void SetQrCodesData(std::vector<QRCodeData> data)
 {
     _dataMutex.lock();
     _qrCodesData = data;
     _dataMutex.unlock();
 }
 
-std::vector<ImageData> GetQrCodesData()
+std::vector<QRCodeData> GetQrCodesData()
 {
     _dataMutex.lock();
-    std::vector<ImageData> qrCodesData = std::vector<ImageData>(_qrCodesData);
+    std::vector<QRCodeData> qrCodesData = std::vector<QRCodeData>(_qrCodesData);
     _dataMutex.unlock();
 
     return qrCodesData;

@@ -35,9 +35,9 @@ set(LOCAL_LINKLIBS)
 list(APPEND LIBNAMES)
 
 #add libraries if needed
-SET(LIBNAME qrcode_referencer_transformation_manager)
+SET(LIBNAME qrcode_referencer_transformation)
 list(APPEND LIBNAMES ${LIBNAME})
-add_library(${LIBNAME} TransformationManager.cpp)
+add_library(${LIBNAME} TransformationManager.cpp PoseDerivator.cpp)
 add_dependencies(${LIBNAME} ${GLOB_DEPENDENCIES} ${LOCAL_DEPENDENCIES})
 target_link_libraries(${LIBNAME} ${GLOB_LINKLIBS} ${LOCAL_LINKLIBS}) 
 
