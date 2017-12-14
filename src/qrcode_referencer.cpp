@@ -7,12 +7,17 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <geometry_msgs/Pose.h>
+#include <pcl/PCLPointCloud2.h>
+#include <pcl/point_types.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl_conversions/pcl_conversions.h>
 #include <cv_bridge/cv_bridge.h>
 
 #include <custom_parameter/parameterHandler.h>
 #include <custom_parameter/parameter.h>
 
 #include <boost/thread.hpp>
+#include <geometry_msgs/PoseStamped.h>
 
 #include "src/data/QRCodeData.h"
 #include "scanning/QRScanner.h"
@@ -28,6 +33,7 @@ ros::Subscriber subImageMessage;
 ros::Subscriber subDepthImageMessage;
 ros::Publisher pubScannedImage;
 ros::Publisher pubMarkedPointCloud;
+ros::Publisher pubDebugPose;
 ros::ServiceServer srvGetQRPose;
 
 //parameter stuff
@@ -137,7 +143,6 @@ void imageCallback(const sensor_msgs::Image::ConstPtr& msg)
     mutexImage.lock();
 
     _cvImage = cv::Mat(cvImage->image);
-
     _currentImageMsg = *msg;
 
     mutexImage.unlock();
@@ -156,6 +161,19 @@ void PublishMarkedImage(cv::Mat image)
 
 }
 
+void PublishDebugPose(QRCodeData qrCode)
+{
+    geometry_msgs::PoseStamped msg;
+    msg.pose = qrCode.qrPose;
+
+    std_msgs::Header header;
+    header.stamp = ros::Time::now();
+    msg.header = header;
+    msg.header.frame_id = qrCode.cameraFrameID;
+
+    pubDebugPose.publish(msg);
+}
+
 void MarkImage()
 {
     cv::Mat markedImage = _scanner.MarkImage(GetQrCodesData(), paramReferenceCorner.GetValue(), GetCvImage());
@@ -166,7 +184,16 @@ void ScanCurrentImg()
 {
     auto currentImage = GetCvImage();
     auto qrCodeData = _scanner.ScanCurrentImg(currentImage);
+
+    //set reference frame for all qrcodes
+    auto frameID = GetImageMsg().header.frame_id;
+    for(int i = 0; i < qrCodeData.size(); i++)
+    {
+        qrCodeData[i].cameraFrameID = frameID;
+    }
+
     SetQrCodesData(qrCodeData);
+
 }
 
 void MarkPointCloud()
@@ -177,26 +204,18 @@ void MarkPointCloud()
 void FuseInformation()
 {
     auto qrCodesData = GetQrCodesData();
-    sensor_msgs::PointCloud2 depthMsg = GetDepthMsg();
+    if(qrCodesData.size() <= 0)
+        return;
 
+    auto depthMsg = GetDepthMsg();
+    pcl::PCLPointCloud2 pclCloud;
+    pcl_conversions::moveToPCL(depthMsg, pclCloud);
 
-    for (int i = 0; i < qrCodesData.size(); i++)
-    {
-        for (int j = 0; j < qrCodesData[i].points.size(); j++)
-        {
-            cv::Point3i point;
-            point.x = qrCodesData[i].points[i].x;
-            point.y = qrCodesData[i].points[i].y;
-            int dataPointer = point.x + ((point.y-1) * depthMsg.width);
-            unsigned int depthValue = depthMsg.data[dataPointer];
-            point.z = qrCodesData[i].points[i].x;
-
-            qrCodesData[i].points3D.push_back(point);
-        }
-    }
+    qrCodesData = _poseDerivator.CalculateQRPose(qrCodesData, pclCloud, paramReferenceCorner.GetValue());
+    PublishDebugPose(qrCodesData[0]);
 
     //publish MarkedPointCloud
-    //TODO: USe MarkPointCloud instead
+    //TODO: Use MarkPointCloud instead
     if(paramPublishMarkedPointCloud.GetValue())
     {
         std_msgs::Header header;
@@ -230,7 +249,7 @@ int main(int argc, char **argv)
     //define subcriber
     subCameraInfo = node->subscribe(paramCameraBaseTopic.GetValue() + "depth/camera_info", 1, cameraInfoCallback);
     ROS_INFO_STREAM("Listening to CameraInfo-Topic: " << subCameraInfo.getTopic());
-    subImageMessage = node->subscribe(paramCameraBaseTopic.GetValue() + "right/image_rect_color", 1, imageCallback);
+    subImageMessage = node->subscribe(paramCameraBaseTopic.GetValue() + "left/image_rect_color", 1, imageCallback);
     ROS_INFO_STREAM("Listening to RGBImage-Topic: " << subImageMessage.getTopic());
     subDepthImageMessage = node->subscribe(paramCameraBaseTopic.GetValue() + "/point_cloud/cloud_registered", 1, depthCloudCallback);
     ROS_INFO_STREAM("Listening to DepthImage-Topic: " << subDepthImageMessage.getTopic());
@@ -240,6 +259,8 @@ int main(int argc, char **argv)
     ROS_INFO_STREAM("Will publish ScannedImages to " << pubScannedImage.getTopic());
     pubMarkedPointCloud = node->advertise<sensor_msgs::PointCloud2>("MarkedPointCloud", 100);
     ROS_INFO_STREAM("Will publish marked Pointclouds to " << pubMarkedPointCloud.getTopic());
+
+    pubDebugPose = node->advertise<geometry_msgs::PoseStamped>("DebugPose", 100);
 
     ros::Rate rate(paramRefreshRate.GetValue());
 

@@ -29,7 +29,7 @@ set(HEADERS
 )
 #Add Local Dependencies
 set(LOCAL_DEPENDENCIES)
-set(LOCAL_LINKLIBS)
+set(LOCAL_LINKLIBS ${OpenCV_LIBS} )
 
 #Create Libname list
 list(APPEND LIBNAMES)

@@ -5,6 +5,7 @@
 #include <string.h>
 #include <vector>
 #include <cv_bridge/cv_bridge.h>
+#include <pcl/point_types.h>
 #include <geometry_msgs/Pose.h>
 
 class QRCodeData
@@ -20,8 +21,9 @@ public:
     int refrenceCounter = 1;
     std::string info = "";
     std::string frameName = "";
+    std::string cameraFrameID = "world";
     std::vector<cv::Point2i> points;
-    std::vector<cv::Point3i> points3D;
+    std::vector<pcl::PointXYZ> points3D;
     geometry_msgs::Pose framePose;
     geometry_msgs::Pose qrPose;
 

@@ -47,6 +47,7 @@ find_package(catkin REQUIRED
     OpenCV
     custom_parameter
     pcl_conversions
+    pcl_ros
     )
 
 #add all message files
