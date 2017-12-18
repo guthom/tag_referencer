@@ -1,5 +1,8 @@
 #include "TransformationManager.h"
 #include <boost/thread.hpp>
+
+#include <geometry_msgs/TransformStamped.h>
+
 TransformationManager::TransformationManager(ros::NodeHandle* parentNode, customparameter::ParameterHandler* parameterHandler)
     : _parameterHandler(parameterHandler)
 {
@@ -8,7 +11,7 @@ TransformationManager::TransformationManager(ros::NodeHandle* parentNode, custom
 
 void TransformationManager::Init(ros::NodeHandle* parentNode)
 {
-    _nodeName = "solver_visualization";
+    _nodeName = "transformation_manager";
     _node = new ros::NodeHandle(*parentNode, _nodeName);
 
     //run node
@@ -25,6 +28,51 @@ void TransformationManager::InitRosStuff()
 {
 }
 
+void TransformationManager::AddQrCodesData(std::vector<QRCodeData> qrCodes)
+{
+    _qrCodeMutex->lock();
+    _latestQrCodesData = qrCodes;
+    _qrCodeMutex->unlock();
+}
+
+
+std::vector<QRCodeData> TransformationManager::GetQrCodes()
+{
+    _qrCodeMutex->lock();
+    std::vector<QRCodeData> ret(_latestQrCodesData);
+    _qrCodeMutex->unlock();
+
+    return ret;
+}
+
+void TransformationManager::PublishTransforms()
+{
+    std::vector<QRCodeData> qrCodes = GetQrCodes();
+
+    std_msgs::Header header;
+    header.stamp = ros::Time::now();
+
+    //create transforms for each entry
+    for(int i = 0; i < qrCodes.size(); i++)
+    {
+        //create new transform and set header and frame ids
+        geometry_msgs::TransformStamped transform;
+        header.frame_id = qrCodes[i].cameraFrameID;
+        transform.header = header;
+        transform.child_frame_id = qrCodes[i].frameName;
+
+        //set transfromation information
+        geometry_msgs::Pose pose = qrCodes[i].qrPose;
+
+        transform.transform.rotation = qrCodes[i].qrPose.orientation;
+        transform.transform.translation.x = pose.position.x;
+        transform.transform.translation.y = pose.position.y;
+        transform.transform.translation.z = pose.position.z;
+
+        _tfBroadcaster->sendTransform(transform);
+    }
+}
+
 void TransformationManager::Run()
 {
     InitParameter();
@@ -33,11 +81,18 @@ void TransformationManager::Run()
     InitRosStuff();
 
     //init mutex in  the same thread
-    _mutex = new boost::mutex();
+    _qrCodeMutex = new boost::mutex();
+    _tfBroadcaster = new tf2_ros::TransformBroadcaster();
+
+    ROS_INFO_STREAM("Starting " + _nodeName + " node");
+
     ros::Rate rate(_paramRefreshRate.GetValue());
     while(_node->ok())
     {
         ros::spinOnce();
+
+        PublishTransforms();
+
         rate.sleep();
     }
 }

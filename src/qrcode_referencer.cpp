@@ -23,6 +23,7 @@
 #include "src/data/QRCodeData.h"
 #include "scanning/QRScanner.h"
 #include "transformations/PoseDerivator.h"
+#include "transformations/TransformationManager.h"
 
 //common stuff
 std::string nodeName = "qrcode_referencer";
@@ -50,6 +51,8 @@ customparameter::Parameter<bool> paramPublishMarkedPointCloud;
 QRScanner _scanner;
 PoseDerivator _poseDerivator;
 
+//Transformation manager
+TransformationManager* _transformManager;
 
 //qrCode data
 static boost::mutex _dataMutex;
@@ -129,10 +132,10 @@ void InitParams()
     parameterHandler = new customparameter::ParameterHandler(node);
     std::string subNamespace = "";
     //Standard params
-    paramRefreshRate = parameterHandler->AddParameter("RefreshRate", "", (int)2);
+    paramRefreshRate = parameterHandler->AddParameter("RefreshRate", "", (int)15);
     paramReferenceCorner = parameterHandler->AddParameter("ReferenceCorner", "", (int)1);
     paramServiceMode = parameterHandler->AddParameter("ServiceMode", "", false);
-    paramPublishMarkedPointCloud = parameterHandler->AddParameter("PublishMarkedPointCloud", "", true);
+    paramPublishMarkedPointCloud = parameterHandler->AddParameter("PublishMarkedPointCloud", "", false);
     paramPublishMarkedImage = parameterHandler->AddParameter("PublishMarkedImage", "", true);
     paramCameraBaseTopic = parameterHandler->AddParameter("CameraBaseTopic", "", std::string("/zed/"));
 }
@@ -159,7 +162,6 @@ void PublishMarkedImage(cv::Mat image)
     sensor_msgs::Image imgMsg;
     imageBridge.toImageMsg(imgMsg);
     pubScannedImage.publish(imgMsg);
-
 }
 
 void PublishDebugPose(std::vector<QRCodeData> qrCodes)
@@ -173,7 +175,6 @@ void PublishDebugPose(std::vector<QRCodeData> qrCodes)
     for(int i = 0; i < qrCodes.size(); i++)
     {
         msg.poses.push_back(qrCodes[i].qrPose);
-
 
         /*
         for (int j = 0; j < qrCodes[i].points3D.size(); j++) {
@@ -227,7 +228,8 @@ void FuseInformation()
     pcl_conversions::moveToPCL(depthMsg, pclCloud);
 
     qrCodesData = _poseDerivator.CalculateQRPose(qrCodesData, pclCloud, paramReferenceCorner.GetValue());
-    PublishDebugPose(qrCodesData);
+    //send derived Transforms to transformation manager
+    _transformManager->AddQrCodesData(qrCodesData);
 
     //publish MarkedPointCloud
     //TODO: Use MarkPointCloud instead
@@ -237,6 +239,7 @@ void FuseInformation()
         header.stamp = ros::Time::now();
         depthMsg.header = header;
         pubMarkedPointCloud.publish(depthMsg);
+        ROS_INFO_STREAM("Marked point cloud is not implemented yet.... I'm so sorry :-)");
     }
 }
 
@@ -277,6 +280,9 @@ int main(int argc, char **argv)
 
     pubDebugPose = node->advertise<geometry_msgs::PoseArray>("DebugPose", 100);
 
+    //launch transformation manager
+    _transformManager = new TransformationManager(node, parameterHandler);
+
     ros::Rate rate(paramRefreshRate.GetValue());
 
     if (paramServiceMode.GetValue())
@@ -302,6 +308,8 @@ int main(int argc, char **argv)
         {
             processingFunctions.push_back(MarkPointCloud);
         }
+
+        ROS_INFO_STREAM("Starting " + nodeName + " node");
 
         while(node->ok())
         {

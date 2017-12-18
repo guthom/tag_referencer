@@ -35,7 +35,7 @@ set(LOCAL_LINKLIBS ${OpenCV_LIBS} ${Eigen_INCLUDE_DIRS})
 list(APPEND LIBNAMES)
 
 #add libraries if needed
-SET(LIBNAME qrcode_referencer_transformation)
+SET(LIBNAME qrcode_referencer_transformations)
 list(APPEND LIBNAMES ${LIBNAME})
 add_library(${LIBNAME} TransformationManager.cpp PoseDerivator.cpp)
 add_dependencies(${LIBNAME} ${GLOB_DEPENDENCIES} ${LOCAL_DEPENDENCIES})
