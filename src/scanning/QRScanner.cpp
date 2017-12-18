@@ -1,6 +1,5 @@
 #include "QRScanner.h"
 #include <boost/algorithm/string.hpp>
-#include <opencv/cv.hpp>
 
 QRScanner::QRScanner()
 {
@@ -48,7 +47,7 @@ cv::Mat QRScanner::MarkImage(std::vector<QRCodeData> qrCodesData, int referenceC
 
     for (int i = 0; i < qrCodesData.size(); i++)
     {
-        Point center = Point(qrCodesData[i].points[3].x, qrCodesData[i].points[3].y);
+        Point center = Point(qrCodesData[i].points[3][0], qrCodesData[i].points[3][1]);
         center.x += 25;
         center.y += 0;
 
@@ -57,24 +56,24 @@ cv::Mat QRScanner::MarkImage(std::vector<QRCodeData> qrCodesData, int referenceC
         putText(image, text ,center, FONT_HERSHEY_SIMPLEX, 0.8, Scalar( 255, 0, 0) ,2, LINE_AA);
 
         //visualize our Refernce
-        center = Point(qrCodesData[i].points[referenceCorner].x, qrCodesData[i].points[referenceCorner].y);
+        center = Point(qrCodesData[i].points[referenceCorner][0], qrCodesData[i].points[referenceCorner][1]);
         circle(image, center, 15 , Scalar( 0, 0, 255), 4);
 
         for (int j = 0; j < qrCodesData[i].points.size(); j++)
         {
-            center = Point(qrCodesData[i].points[j].x, qrCodesData[i].points[j].y);
+            center = Point(qrCodesData[i].points[j][0], qrCodesData[i].points[j][1]);
             circle(image, center, 5 , Scalar( 255, 0, 0), 4);
 
             putText(image, std::to_string(j)  ,center, FONT_HERSHEY_SIMPLEX, 0.8, Scalar( 255, 0, 0) ,2, LINE_AA);
             if(j < qrCodesData[i].points.size() -1)
             {
-                Point p2 = Point(qrCodesData[i].points[j+1].x, qrCodesData[i].points[j+1].y);
+                Point p2 = Point(qrCodesData[i].points[j+1][0], qrCodesData[i].points[j+1][1]);
                 line(image, center, p2, Scalar( 0, 255, 0), 2, 8);
             }
         }
 
         //draw last line
-        Point p2 = Point(qrCodesData[i].points[0].x, qrCodesData[i].points[0].y);
+        Point p2 = Point(qrCodesData[i].points[0][0], qrCodesData[i].points[0][1]);
         line(image, center, p2, Scalar( 0, 255, 0), 2, 8);
     }
 
@@ -132,12 +131,12 @@ std::vector<QRCodeData> QRScanner::ScanCurrentImg(cv::Mat cvImage)
             ProcessRawString(symbol->get_data().c_str(), &entry);
 
             //run through all detected points
-            std::vector<cv::Point> points;
+            std::vector<Eigen::Vector2i> points;
             for(int i = 0; i < symbol->get_location_size(); i++)
             {
-                cv::Point point;
-                point.x = symbol->get_location_x(i);
-                point.y = symbol->get_location_y(i);
+                Eigen::Vector2i point;
+                point[0] = symbol->get_location_x(i);
+                point[1] = symbol->get_location_y(i);
                 points.push_back(point);
             }
 

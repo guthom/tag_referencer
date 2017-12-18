@@ -5,6 +5,7 @@
 
 #include <geometry_msgs/Transform.h>
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/Quaternion.h>
 
 #include "../data/QRCodeData.h"
 
@@ -22,12 +23,11 @@ public:
     PoseDerivator();
     ~PoseDerivator();
 
-    std::vector<QRCodeData> CalculateQRPose(std::vector<QRCodeData> qrCodes, PointCloud pointCloud, int referencePoint);
+    std::vector<QRCodeData> CalculateQRPose(std::vector<QRCodeData> qrCodes, PointCloud pointCloud, int referenceCorner);
 
 private:
 
     void Init();
-
     geometry_msgs::Transform PoseToTransform(geometry_msgs::Pose pose);
 };
 

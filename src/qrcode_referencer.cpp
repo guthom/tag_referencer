@@ -129,7 +129,7 @@ void InitParams()
     parameterHandler = new customparameter::ParameterHandler(node);
     std::string subNamespace = "";
     //Standard params
-    paramRefreshRate = parameterHandler->AddParameter("RefreshRate", "", (int)15);
+    paramRefreshRate = parameterHandler->AddParameter("RefreshRate", "", (int)2);
     paramReferenceCorner = parameterHandler->AddParameter("ReferenceCorner", "", (int)1);
     paramServiceMode = parameterHandler->AddParameter("ServiceMode", "", false);
     paramPublishMarkedPointCloud = parameterHandler->AddParameter("PublishMarkedPointCloud", "", true);
@@ -166,15 +166,27 @@ void PublishDebugPose(std::vector<QRCodeData> qrCodes)
 {
     geometry_msgs::PoseArray msg;
     std_msgs::Header header;
-    header.stamp = ros::Time::now();
+    //header.stamp = ros::Time::now();
     msg.header = header;
     msg.header.frame_id = qrCodes[0].cameraFrameID;
 
     for(int i = 0; i < qrCodes.size(); i++)
     {
         msg.poses.push_back(qrCodes[i].qrPose);
+
+
+        /*
+        for (int j = 0; j < qrCodes[i].points3D.size(); j++) {
+            geometry_msgs::Pose pose;
+            pose.position.x = qrCodes[i].points3D[j][0];
+            pose.position.y = qrCodes[i].points3D[j][1];
+            pose.position.z = qrCodes[i].points3D[j][2];
+
+            msg.poses.push_back(pose);
+        }
+        */
     }
-    pubDebugPose.publish(msg);
+        pubDebugPose.publish(msg);
 }
 
 void MarkImage()

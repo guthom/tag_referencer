@@ -4,9 +4,8 @@
 #include <ros/ros.h>
 #include <string.h>
 #include <vector>
-#include <cv_bridge/cv_bridge.h>
-#include <pcl/point_types.h>
 #include <geometry_msgs/Pose.h>
+#include <Eigen/Geometry>
 
 class QRCodeData
 {
@@ -22,8 +21,8 @@ public:
     std::string info = "";
     std::string frameName = "";
     std::string cameraFrameID = "world";
-    std::vector<cv::Point2i> points;
-    std::vector<pcl::PointXYZ> points3D;
+    std::vector<Eigen::Vector2i> points;
+    std::vector<Eigen::Vector3f> points3D;
     geometry_msgs::Pose framePose;
     geometry_msgs::Pose qrPose;
 

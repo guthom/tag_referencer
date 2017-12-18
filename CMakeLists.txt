@@ -50,6 +50,8 @@ find_package(catkin REQUIRED
     pcl_ros
     )
 
+find_package(Eigen3 REQUIRED)
+
 #add all message files
 #add_message_files(
 #    FILES
@@ -82,13 +84,13 @@ catkin_package(
 include_directories(include ${CATKIN_DEVEL_PREFIX}/include)
 include_directories(include ${catkin_INCLUDE_DIRS}
     ${Boost_INCLUDE_DIR}
-        ${EIGEN_INCLUDE_DIRS}
+    ${EIGEN_INCLUDE_DIRS}
 )
 
 
 #SET GLOBAL DEPENDECIES and Links
 set(LINKLIBS)
-set(GLOB_LINKLIBS ${catkin_LIBRARIES} zbar)
+set(GLOB_LINKLIBS ${catkin_LIBRARIES} zbar ${Eigen_LIBRARIES})
 set(SUBLIBS)
 set(GLOB_DEPENDENCIES 
     ${PROJECT_NAME}_generate_messages

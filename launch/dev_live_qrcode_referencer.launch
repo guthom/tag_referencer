@@ -9,7 +9,12 @@
   <node name="static_information" pkg="kollro_solver" type="StaticInformation"/>	
 
   <!-- launch zed-->
-  <include file="$(find zed_wrapper)/launch/zed.launch">
-  </include>
+    <group ns="zed">
+        <include file="$(find zed_wrapper)/launch/zed_camera.launch">
+            <!-- compliant mode for rviz -->
+            <arg name="odometry_frame"        value="map" />
+        </include>
+    </group>
+    
 
 </launch>

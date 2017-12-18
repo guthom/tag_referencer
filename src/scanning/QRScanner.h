@@ -5,6 +5,7 @@
 #include <string.h>
 #include "zbar.h"
 
+#include <opencv/cv.hpp>
 #include "src/data/QRCodeData.h"
 
 using namespace zbar;
