@@ -1,4 +1,4 @@
 http://goqr.me/
-0,info,testFrame,0.0,0.0,0.0,0.0,0.0,0.0,1.0;
-1,anotherinfo,anotherFrame,1.0,1.0,0.0,0.0,0.0,0.0,1.0;
-id;AdditionalInformation;FrameName;[x,y,z,qx,qy,qz,qw]
+0,testFrame
+1,anotherFrame
+id,FrameName
