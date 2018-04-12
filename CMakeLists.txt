@@ -36,15 +36,14 @@ MESSAGE(STATUS "Found ROS-Services: " ${SERVICES})
 
 #find catkin packages
 find_package(catkin REQUIRED
+    OpenCV
     message_generation
     roscpp
-    rospy
     geometry_msgs
     nav_msgs
     tf2
     tf2_ros
     cv_bridge
-    OpenCV
     custom_parameter
     pcl_conversions
     pcl_ros

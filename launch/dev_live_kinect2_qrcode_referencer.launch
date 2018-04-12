@@ -8,13 +8,7 @@
   <!-- run static information core node-->  
   <node name="static_information" pkg="kollro_solver" type="StaticInformation"/>	
 
-  <!-- launch zed-->
-    <group ns="zed">
-        <include file="$(find qrcode_referencer)/launch/zed_camera.launch">
-            <!-- compliant mode for rviz -->
-            <arg name="odometry_frame"        value="map" />
-        </include>
-    </group>
-    
-
+ <node pkg="tf2_ros" type="static_transform_publisher" name="camera_link" args="0 0 0 0 0 0 /world /camera_link"/>
+ <node pkg="tf2_ros" type="static_transform_publisher" name="kinect_link" args="0 0 0 0 0 0 /world /kinect2_rgb_optical_frame"/>
+ <include file="$(find kinect2_bridge)/launch/kinect2_bridge.launch"/>   
 </launch>

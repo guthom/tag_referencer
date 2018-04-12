@@ -10,6 +10,7 @@
   <!-- replay dev rosbag-->
   <include file="$(find qrcode_referencer)/launch/replay_bag.launch">
     <arg name="loop" value="true"/>
+    <arg name="rate" value="0.1"/>
   </include>
 
 </launch>

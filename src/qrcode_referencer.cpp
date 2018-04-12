@@ -40,7 +40,6 @@ ros::ServiceServer srvGetQRPose;
 
 //parameter stuff
 customparameter::ParameterHandler* parameterHandler;
-customparameter::Parameter<std::string> paramCameraBaseTopic;
 customparameter::Parameter<int> paramRefreshRate;
 customparameter::Parameter<int> paramReferenceCorner;
 customparameter::Parameter<bool> paramServiceMode;
@@ -74,6 +73,15 @@ std::vector<QRCodeData> GetQrCodesData()
 }
 
 static boost::mutex mutexImage;
+sensor_msgs::Image _currentImageMsg;
+sensor_msgs::Image GetImageMsg()
+{
+    mutexImage.lock();
+    sensor_msgs::Image image = sensor_msgs::Image(_currentImageMsg);
+    mutexImage.unlock();
+    return image;
+}
+
 //TODO: Use cvBridge only!
 cv::Mat _cvImage;
 cv::Mat GetCvImage()
@@ -81,15 +89,7 @@ cv::Mat GetCvImage()
     mutexImage.lock();
     cv::Mat image = cv::Mat(_cvImage);
     mutexImage.unlock();
-    return image;
-}
 
-sensor_msgs::Image _currentImageMsg;
-sensor_msgs::Image GetImageMsg()
-{
-    mutexImage.lock();
-    sensor_msgs::Image image = sensor_msgs::Image(_currentImageMsg);
-    mutexImage.unlock();
     return image;
 }
 
@@ -137,16 +137,16 @@ void InitParams()
     paramServiceMode = parameterHandler->AddParameter("ServiceMode", "", false);
     paramPublishMarkedPointCloud = parameterHandler->AddParameter("PublishMarkedPointCloud", "", false);
     paramPublishMarkedImage = parameterHandler->AddParameter("PublishMarkedImage", "", true);
-    paramCameraBaseTopic = parameterHandler->AddParameter("CameraBaseTopic", "", std::string("/zed/"));
 }
 
 void imageCallback(const sensor_msgs::Image::ConstPtr& msg)
 {
-    cv_bridge::CvImageConstPtr cvImage = cv_bridge::toCvShare(msg, sensor_msgs::image_encodings::RGB8);
+    cv_bridge::CvImageConstPtr cvImage = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::RGB8);
 
     mutexImage.lock();
 
     _cvImage = cv::Mat(cvImage->image);
+
     _currentImageMsg = *msg;
 
     mutexImage.unlock();
@@ -265,11 +265,11 @@ int main(int argc, char **argv)
     Init();
 
     //define subcriber
-    subCameraInfo = node->subscribe(paramCameraBaseTopic.GetValue() + "depth/camera_info", 1, cameraInfoCallback);
+    subCameraInfo = node->subscribe("/kinect2/hd/camera_info", 1, cameraInfoCallback);
     ROS_INFO_STREAM("Listening to CameraInfo-Topic: " << subCameraInfo.getTopic());
-    subImageMessage = node->subscribe(paramCameraBaseTopic.GetValue() + "left/image_rect_color", 1, imageCallback);
+    subImageMessage = node->subscribe("/kinect2/hd/image_color_rect", 1, imageCallback);
     ROS_INFO_STREAM("Listening to RGBImage-Topic: " << subImageMessage.getTopic());
-    subDepthImageMessage = node->subscribe(paramCameraBaseTopic.GetValue() + "/point_cloud/cloud_registered", 1, depthCloudCallback);
+    subDepthImageMessage = node->subscribe("/kinect2/hd/points", 1, depthCloudCallback);
     ROS_INFO_STREAM("Listening to DepthImage-Topic: " << subDepthImageMessage.getTopic());
 
     //define publisher
