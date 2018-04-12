@@ -1,0 +1,9 @@
+bool success
+int id
+string info
+string frameName
+string CameraInfoTopic
+int32 pixX
+int32 pixY
+geometry_msgs/Pose framePose
+geometry_msgs/Pose qrPose
