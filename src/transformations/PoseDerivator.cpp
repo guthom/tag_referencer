@@ -26,42 +26,22 @@ geometry_msgs::Quaternion CalculateOrientation(std::vector<Eigen::Vector3f> poin
     using namespace Eigen;
     geometry_msgs::Quaternion ret;
 
-    /*
-    //use this if plane/normal will be used for orientation otherwise we can easy create the quaternion with 2 points:-o
-    //fitting plane -> n*p+d=0 -> normal * position + offset
-    //to solve: ax + by + cz + d = 0
-    MatrixXf leftSide(points.size(), 3);
-    MatrixXf rightSide(points.size(), 1);
-
-    //feed left and right hand side with points
-    for (int i = 0; i < points.size(); i++)
-    {
-        leftSide(i,0) = points[i][0];
-        leftSide(i,1) = points[i][1];
-        leftSide(i,2) = points[i][2];
-        rightSide(i,0) = -1.0f;
-    }
-
-    const IOFormat fmt(2, DontAlignCols, "\t", " ", "", "", "", "");
-
-    //calculate the planes normal vecotr by solving the constructed LGS
-    Vector3f normalVec = leftSide.jacobiSvd(ComputeThinU | ComputeThinV).solve(rightSide);
-    std::cout << normalVec.format(fmt)  << std::endl;
-    */
-
+    //calculate unit vectors of new coordinate system
     Vector3f xVec = points[2] - points[1];
     xVec.normalize();
     Vector3f yVec = points[0] - points[1];
     yVec.normalize();
+    //Calculate Z Unit Vector by normalize cross product of other x/y vectors -> normal for x/y plane
+    Vector3f zVec = -xVec.cross(yVec);
+    zVec.normalize();
 
     float rot1, rot2, rot3;
-    rot1 = atan2(xVec[1], xVec[0]);
-    rot2 = atan2(yVec[2], yVec[0]);
-    rot3 = 0.0;
+    rot1 = acosf(Vector3f::UnitX().dot(xVec));
+    rot2 = acosf(Vector3f::UnitY().dot(yVec));
+    rot3 = acosf(Vector3f::UnitZ().dot(zVec));
 
-    //rotate with ZXZ convention
     Eigen::Quaternionf  quat =  AngleAxisf(rot1, Vector3f::UnitZ()) *
-                                AngleAxisf(rot2, Vector3f::UnitX()) *
+                                AngleAxisf(rot2, Vector3f::UnitY()) *
                                 AngleAxisf(rot3, Vector3f::UnitZ());
 
     ret.x = quat.x();
