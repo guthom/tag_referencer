@@ -32,7 +32,7 @@ geometry_msgs::Quaternion CalculateOrientation(std::vector<Eigen::Vector3f> poin
     Vector3f yVec = points[0] - points[1];
     yVec.normalize();
     //Calculate Z Unit Vector by normalize cross product of other x/y vectors -> normal for x/y plane
-    Vector3f zVec = -xVec.cross(yVec);
+    Vector3f zVec = xVec.cross(yVec);
     zVec.normalize();
 
     float rot1, rot2, rot3;
