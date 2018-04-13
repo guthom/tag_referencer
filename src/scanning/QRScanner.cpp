@@ -116,9 +116,20 @@ std::vector<QRCodeData> QRScanner::ScanCurrentImg(cv::Mat cvImage)
 {
     std::vector<QRCodeData> qrCodes;
 
-    auto image = CreateZBarImage(&cvImage);
+    //need to copy cv-matrix before we're able to scann it, it can happen, that the reference is getting lost
+    //and we run in a segfault
+    cv::Mat copyImg = cvImage.clone();
 
-    int res = imgScanner.scan(*image);
+    auto image = CreateZBarImage(&copyImg);
+
+    int res = 0;
+    try
+    {
+        res = imgScanner.scan(*image);
+    }
+    catch (std::exception& e)
+    {
+    }
 
     if(res < 0)
     {
