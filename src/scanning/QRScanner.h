@@ -1,24 +1,22 @@
 #ifndef QRSCANNER_H
 #define QRSCANNER_H
 
-#include <ros/ros.h>
 #include <string.h>
 #include "zbar.h"
 
-#include <opencv/cv.hpp>
-#include "src/data/QRCodeData.h"
+#include "ScannerBase.h"
 
 using namespace zbar;
 using namespace cv;
 
 class QRScanner
-{
+        : public ScannerBase {
     public:
         QRScanner();
         ~QRScanner();
 
-        std::vector<QRCodeData> ScanCurrentImg(Mat cvImage);
-        cv::Mat MarkImage(std::vector<QRCodeData> qrCodesData, int referenceCorner, cv::Mat image);
+        virtual std::vector<QRCodeData> ScanCurrentImg(Mat cvImage);
+        virtual cv::Mat MarkImage(std::vector<QRCodeData> qrCodesData, int referenceCorner, cv::Mat image);
 
     private:
         //zbar stuf
