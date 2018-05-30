@@ -265,11 +265,11 @@ int main(int argc, char **argv)
     Init();
 
     //define subcriber
-    subCameraInfo = node->subscribe("/kinect2/hd/camera_info", 1, cameraInfoCallback);
+    subCameraInfo = node->subscribe("/camera/color/camera_info", 1, cameraInfoCallback);
     ROS_INFO_STREAM("Listening to CameraInfo-Topic: " << subCameraInfo.getTopic());
-    subImageMessage = node->subscribe("/kinect2/hd/image_color_rect", 1, imageCallback);
+    subImageMessage = node->subscribe("/camera/color/image_rect_color", 1, imageCallback);
     ROS_INFO_STREAM("Listening to RGBImage-Topic: " << subImageMessage.getTopic());
-    subDepthImageMessage = node->subscribe("/kinect2/hd/points", 1, depthCloudCallback);
+    subDepthImageMessage = node->subscribe("/camera/depth_registered/points", 1, depthCloudCallback);
     ROS_INFO_STREAM("Listening to DepthImage-Topic: " << subDepthImageMessage.getTopic());
 
     //define publisher
