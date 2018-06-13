@@ -1,3 +1,6 @@
 <launch>  
-  <node name="qrcode_referencer" pkg="qrcode_referencer" type="qrcode_referencer" output="screen"/>
+  <arg name="simulateQRCode" default="false"/>
+  <node name="qrcode_referencer" pkg="qrcode_referencer" type="qrcode_referencer" output="screen">
+    <param name="SimulationMode" value="$(arg simulateQRCode)"/>
+  </node>
 </launch>

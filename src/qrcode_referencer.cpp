@@ -45,6 +45,7 @@ customparameter::Parameter<int> paramReferenceCorner;
 customparameter::Parameter<bool> paramServiceMode;
 customparameter::Parameter<bool> paramPublishMarkedImage;
 customparameter::Parameter<bool> paramPublishMarkedPointCloud;
+customparameter::Parameter<bool> paramSimulationMode;
 
 //scanning stuff
 QRScanner _scanner;
@@ -137,6 +138,7 @@ void InitParams()
     paramServiceMode = parameterHandler->AddParameter("ServiceMode", "", false);
     paramPublishMarkedPointCloud = parameterHandler->AddParameter("PublishMarkedPointCloud", "", false);
     paramPublishMarkedImage = parameterHandler->AddParameter("PublishMarkedImage", "", true);
+    paramSimulationMode = parameterHandler->AddParameter("SimulationMode", "", true);
 }
 
 void imageCallback(const sensor_msgs::Image::ConstPtr& msg)
@@ -192,23 +194,27 @@ void PublishDebugPose(std::vector<QRCodeData> qrCodes)
 
 void MarkImage()
 {
-    cv::Mat markedImage = _scanner.MarkImage(GetQrCodesData(), paramReferenceCorner.GetValue(), GetCvImage());
-    PublishMarkedImage(markedImage);
+    if(_currentImageMsg.data.size() > 0)
+    {
+        cv::Mat markedImage = _scanner.MarkImage(GetQrCodesData(), paramReferenceCorner.GetValue(), GetCvImage());
+        PublishMarkedImage(markedImage);
+    }
 }
 
 void ScanCurrentImg()
 {
-    auto currentImage = GetCvImage();
-    auto qrCodeData = _scanner.ScanCurrentImg(currentImage);
+    cv::Mat currentImage = GetCvImage();
+    if(!currentImage.empty()) {
+        auto qrCodeData = _scanner.ScanCurrentImg(currentImage);
 
-    //set reference frame for all qrcodes
-    auto frameID = GetImageMsg().header.frame_id;
-    for(int i = 0; i < qrCodeData.size(); i++)
-    {
-        qrCodeData[i].cameraFrameID = frameID;
+        //set reference frame for all qrcodes
+        auto frameID = GetImageMsg().header.frame_id;
+        for (int i = 0; i < qrCodeData.size(); i++) {
+            qrCodeData[i].cameraFrameID = frameID;
+        }
+
+        SetQrCodesData(qrCodeData);
     }
-
-    SetQrCodesData(qrCodeData);
 
 }
 
@@ -253,6 +259,29 @@ bool GetQRPoseService(qrcode_referencer::GetQRPoseRequest &request, qrcode_refer
 void Init()
 {
     InitParams();
+}
+
+void PublishSimulatedQR()
+{
+    auto qrCodeData = GetQrCodesData();
+
+    QRCodeData simulatedData;
+    simulatedData.id = 100;
+    simulatedData.cameraFrameID = "world";
+    simulatedData.frameName ="simulatedQR";
+    simulatedData.qrPose.position.x = 1.2;
+    simulatedData.qrPose.position.y = 0.0;
+    simulatedData.qrPose.position.z = 0.4;
+
+    simulatedData.qrPose.orientation.w =  0.643;
+    simulatedData.qrPose.orientation.x = 0.0;
+    simulatedData.qrPose.orientation.y = -0.766;
+    simulatedData.qrPose.orientation.z = 0.0;
+
+    //append simualted Pose information
+    qrCodeData.push_back(simulatedData);
+    SetQrCodesData(qrCodeData);
+
 }
 
 //used to save a lot of ifs every cycle
@@ -309,6 +338,12 @@ int main(int argc, char **argv)
             processingFunctions.push_back(MarkPointCloud);
         }
 
+        if(paramSimulationMode.GetValue())
+        {
+            ROS_WARN_STREAM("QRCodeReferencer will Publish simulated QRCode pose!");
+            processingFunctions.push_back(PublishSimulatedQR);
+        }
+
         ROS_INFO_STREAM("Starting " + nodeName + " node");
 
         while(node->ok())
@@ -316,13 +351,10 @@ int main(int argc, char **argv)
             ros::spinOnce();
 
             //continuously scann image
-            if(_currentImageMsg.data.size() > 0)
+            for(int i = 0; i < processingFunctions.size(); i++)
             {
-                for(int i = 0; i < processingFunctions.size(); i++)
-                {
-                    //execute added functions
-                    (*processingFunctions[i])();
-                }
+                //execute added functions
+                (*processingFunctions[i])();
             }
 
             rate.sleep();
