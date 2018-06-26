@@ -1,0 +1,33 @@
+<launch>  
+  <!-- load params-->
+  <arg name="rviz_cfg" default="$(find qrcode_referencer)/rvizConfig/dev.rviz" />
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rviz_cfg)"/>	
+
+  <node name="rqt_graph" pkg="rqt_graph" type="rqt_graph"/>
+
+  <!-- run static information core node-->  
+  <node name="static_information" pkg="kollro_solver" type="StaticInformation"/>	
+
+<arg name="width" default="1280"/>
+<arg name="height" default="720"/>
+    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_link_tf" args="0 0 0 0 0 0 1 /world /camera_link"/>  
+    <include file="$(find realsense2_camera)/launch/rs_rgbd.launch">
+        <arg name="namespace"                 value="depthcam1"/>
+        <!--arg name="rgb"                       value="rgb" />
+        <arg name="ir"                  value="infra1" />
+        <arg name="depth"               value="depth" />
+        <arg name="depth_registered"    value="depth_registered" />
+        <arg name="projector"           value="projector" /-->
+        <arg name="align_depth"         value="true"/>
+        <arg name="serial_no"           value=""/>
+        <arg name="json_file_path"      value="/home/thomas/ROS/RealSensCfg/highaccuracy_test.json"/>     
+        <arg name="depth_width"         value="$(arg width)"/>
+        <arg name="depth_height"        value="$(arg height)"/>
+        <arg name="infra1_width"        value="$(arg width)"/>
+        <arg name="infra1_height"     value="$(arg height)"/>
+        <arg name="infra2_width"      value="$(arg width)"/>
+        <arg name="infra2_height"     value="$(arg height)"/>
+        <arg name="color_width"       value="$(arg width)"/>
+        <arg name="color_height"      value="$(arg height)"/>
+      </include>
+</launch>

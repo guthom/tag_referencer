@@ -138,7 +138,7 @@ void InitParams()
     paramServiceMode = parameterHandler->AddParameter("ServiceMode", "", false);
     paramPublishMarkedPointCloud = parameterHandler->AddParameter("PublishMarkedPointCloud", "", false);
     paramPublishMarkedImage = parameterHandler->AddParameter("PublishMarkedImage", "", true);
-    paramSimulationMode = parameterHandler->AddParameter("SimulationMode", "", true);
+    paramSimulationMode = parameterHandler->AddParameter("SimulationMode", "", false);
 }
 
 void imageCallback(const sensor_msgs::Image::ConstPtr& msg)
@@ -268,18 +268,49 @@ void PublishSimulatedQR()
     QRCodeData simulatedData;
     simulatedData.id = 100;
     simulatedData.cameraFrameID = "world";
-    simulatedData.frameName ="simulatedQR";
-    simulatedData.qrPose.position.x = 1.2;
-    simulatedData.qrPose.position.y = 0.0;
-    simulatedData.qrPose.position.z = 0.4;
+    simulatedData.frameName ="simulatedQR0";
+    simulatedData.qrPose.position.x = 0.8;
+    simulatedData.qrPose.position.y = 0.3;
+    simulatedData.qrPose.position.z = 0.8;
 
     simulatedData.qrPose.orientation.w =  0.643;
     simulatedData.qrPose.orientation.x = 0.0;
     simulatedData.qrPose.orientation.y = -0.766;
     simulatedData.qrPose.orientation.z = 0.0;
-
     //append simualted Pose information
     qrCodeData.push_back(simulatedData);
+
+    simulatedData.qrPose.position.y = -0.2;
+
+    simulatedData.qrPose.orientation.w = 0.633;
+    simulatedData.qrPose.orientation.x = -0.112;
+    simulatedData.qrPose.orientation.y = -0.754;
+    simulatedData.qrPose.orientation.z = 0.133;
+    simulatedData.frameName ="simulatedQR1";
+    qrCodeData.push_back(simulatedData);
+
+    simulatedData.qrPose.position.y = 0.0;
+    simulatedData.frameName ="simulatedQR2";
+    qrCodeData.push_back(simulatedData);
+
+    simulatedData.qrPose.position.z = 0.3;
+    simulatedData.qrPose.orientation.w = 0.766;
+    simulatedData.qrPose.orientation.x = -0.0;
+    simulatedData.qrPose.orientation.y = -0.643;
+    simulatedData.qrPose.orientation.z = 0.0;
+    simulatedData.frameName ="simulatedQR3";
+    qrCodeData.push_back(simulatedData);
+
+    simulatedData.qrPose.position.z = 0.5;
+    simulatedData.qrPose.position.x = 1.0;
+    simulatedData.qrPose.position.y = 0.0;
+    simulatedData.qrPose.orientation.w = 0.633;
+    simulatedData.qrPose.orientation.x = 0.112;
+    simulatedData.qrPose.orientation.y = -0.754;
+    simulatedData.qrPose.orientation.z = -0.133;
+    simulatedData.frameName ="simulatedQR4";
+    qrCodeData.push_back(simulatedData);
+
     SetQrCodesData(qrCodeData);
 
 }
@@ -294,11 +325,11 @@ int main(int argc, char **argv)
     Init();
 
     //define subcriber
-    subCameraInfo = node->subscribe("/camera/color/camera_info", 1, cameraInfoCallback);
+    subCameraInfo = node->subscribe("/depthcam1/rgb/camera_info", 1, cameraInfoCallback);
     ROS_INFO_STREAM("Listening to CameraInfo-Topic: " << subCameraInfo.getTopic());
-    subImageMessage = node->subscribe("/camera/color/image_rect_color", 1, imageCallback);
+    subImageMessage = node->subscribe("/depthcam1/color/image_raw", 1, imageCallback);
     ROS_INFO_STREAM("Listening to RGBImage-Topic: " << subImageMessage.getTopic());
-    subDepthImageMessage = node->subscribe("/camera/depth_registered/points", 1, depthCloudCallback);
+    subDepthImageMessage = node->subscribe("/depthcam1/depth_registered/points", 1, depthCloudCallback);
     ROS_INFO_STREAM("Listening to DepthImage-Topic: " << subDepthImageMessage.getTopic());
 
     //define publisher
