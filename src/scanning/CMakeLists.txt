@@ -37,14 +37,14 @@ list(APPEND LIBNAMES)
 #add libraries if needed
 SET(LIBNAME qrcode_referencer_scanning)
 list(APPEND LIBNAMES ${LIBNAME})
-add_library(${LIBNAME} QRScanner.cpp)
+add_library(${LIBNAME} ScannerBase.cpp QRScanner.cpp AprilTagScanner.cpp)
 add_dependencies(${LIBNAME} ${GLOB_DEPENDENCIES} ${LOCAL_DEPENDENCIES})
 target_link_libraries(${LIBNAME} ${GLOB_LINKLIBS} ${LOCAL_LINKLIBS}) 
 
 set(GLOB_DEPENDENCIES
     ${GLOB_DEPENDENCIES} 
     ${LIBNAME} 
-    PARENT_SCOPE
+    PARENT_SCOPEs
 )
 
 set(GLOB_LINKLIBS

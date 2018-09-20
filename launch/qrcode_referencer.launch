@@ -1,6 +1,10 @@
 <launch>  
   <arg name="simulateQRCode" default="false"/>
+  <arg name="AprilTagMode" default="true"/>
+  <arg name="QRCodeMode" default="false"/>
   <node name="qrcode_referencer" pkg="qrcode_referencer" type="qrcode_referencer" output="screen">
     <param name="SimulationMode" value="$(arg simulateQRCode)"/>
+    <param name="AprilTagMode" value="$(arg AprilTagMode)"/>
+    <param name="QRCodeMode" value="$(arg QRCodeMode)"/>
   </node>
 </launch>

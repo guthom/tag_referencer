@@ -1,7 +1,7 @@
 #include "QRScanner.h"
 #include <boost/algorithm/string.hpp>
 
-QRScanner::QRScanner()
+QRScanner::QRScanner(customparameter::ParameterHandler* paramHandler) : ScannerBase(paramHandler)
 {
     Init();
 }
@@ -10,6 +10,15 @@ void QRScanner::Init()
 {
     //TODO: maybe theres a better parameterset for the configuration
     imgScanner.set_config(ZBAR_QRCODE, ZBAR_CFG_ENABLE, 1);
+}
+
+void QRScanner::InitParams()
+{
+    //init params
+    std::string subNamespace = "QRCodeScanner";
+    //Standard params
+    ScannerBase::paramReferenceSize = _paramHandler->AddParameter("ReferenceSize", "", (float)0.0f);
+
 }
 
 zbar::Image* QRScanner::CreateZBarImage(cv::Mat* image)

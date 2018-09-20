@@ -13,8 +13,9 @@
   <arg name="height" default="720"/>
     <node pkg="tf2_ros" type="static_transform_publisher" name="camera_link_tf" args="0 0 0 0 0 0 1 /world /camera_link"/>    
     <include file="$(find realsense2_camera)/launch/rs_rgbd.launch">
-        <arg name="serial_no"           value=""/>
-        <arg name="json_file_path"      value="/home/thomas/ROS/RealSensCfg/highaccuracy.json"/>     
+        <arg name="camera"            value="depthcam1"/>
+        <arg name="serial_no"         value=""/>
+        <arg name="json_file_path"    value="/home/thomas/ROS/RealSensCfg/highaccuracy.json"/>     
         <arg name="depth_width"       value="$(arg width)"/>
         <arg name="depth_height"      value="$(arg height)"/>
         <arg name="infra1_width"      value="$(arg width)"/>
@@ -26,5 +27,8 @@
     </include>
 
     <include file="$(find qrcode_referencer)/launch/qrcode_referencer.launch">
+        <arg name="simulateQRCode" value="false"/>
+        <arg name="AprilTagMode" value="true"/>
+        <arg name="QRCodeMode" value="false"/>
     </include>
 </launch>

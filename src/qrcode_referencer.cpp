@@ -1,6 +1,7 @@
 #include <ros/ros.h>
 #include <string.h>
 
+#include <vector>
 #include <ros/subscriber.h>
 #include <qrcode_referencer/GetQRPose.h>
 #include <sensor_msgs/Image.h>
@@ -21,7 +22,9 @@
 #include <geometry_msgs/PoseStamped.h>
 
 #include "src/data/QRCodeData.h"
+#include "scanning/ScannerBase.h"
 #include "scanning/QRScanner.h"
+#include "scanning/AprilTagScanner.h"
 #include "transformations/PoseDerivator.h"
 #include "transformations/TransformationManager.h"
 
@@ -46,9 +49,11 @@ customparameter::Parameter<bool> paramServiceMode;
 customparameter::Parameter<bool> paramPublishMarkedImage;
 customparameter::Parameter<bool> paramPublishMarkedPointCloud;
 customparameter::Parameter<bool> paramSimulationMode;
+customparameter::Parameter<bool> paramAprilTagMode;
+customparameter::Parameter<bool> paramQRCodeMode;
 
 //scanning stuff
-QRScanner _scanner;
+std::vector<ScannerBase*> _scanner;
 PoseDerivator _poseDerivator;
 
 //Transformation manager
@@ -102,6 +107,7 @@ void depthCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& msg)
     _currentDepthMsg = *msg;
     mutexDepth.unlock();
 }
+
 sensor_msgs::PointCloud2 GetDepthMsg()
 {
     mutexDepth.lock();
@@ -139,6 +145,8 @@ void InitParams()
     paramPublishMarkedPointCloud = parameterHandler->AddParameter("PublishMarkedPointCloud", "", false);
     paramPublishMarkedImage = parameterHandler->AddParameter("PublishMarkedImage", "", true);
     paramSimulationMode = parameterHandler->AddParameter("SimulationMode", "", false);
+    paramQRCodeMode = parameterHandler->AddParameter("QRCodeMode", "", true);
+    paramAprilTagMode = parameterHandler->AddParameter("AprilTagMode", "", true);
 }
 
 void imageCallback(const sensor_msgs::Image::ConstPtr& msg)
@@ -196,7 +204,13 @@ void MarkImage()
 {
     if(_currentImageMsg.data.size() > 0)
     {
-        cv::Mat markedImage = _scanner.MarkImage(GetQrCodesData(), paramReferenceCorner.GetValue(), GetCvImage());
+        cv::Mat markedImage = GetCvImage();
+
+        for (int i = 0; i < _scanner.size(); i++)
+        {
+            markedImage = _scanner[i]->MarkImage(GetQrCodesData(), paramReferenceCorner.GetValue(), markedImage);
+        }
+
         PublishMarkedImage(markedImage);
     }
 }
@@ -205,7 +219,15 @@ void ScanCurrentImg()
 {
     cv::Mat currentImage = GetCvImage();
     if(!currentImage.empty()) {
-        auto qrCodeData = _scanner.ScanCurrentImg(currentImage);
+        std::vector<QRCodeData> qrCodeData;
+
+        for (int i = 0; i < _scanner.size(); i++)
+        {
+            std::vector<QRCodeData>  newQRCodeData = _scanner[i]->ScanCurrentImg(currentImage);
+
+            qrCodeData.reserve(qrCodeData.size() + newQRCodeData.size());
+            qrCodeData.insert(std::end(qrCodeData), std::begin(newQRCodeData), std::end(newQRCodeData));
+        }
 
         //set reference frame for all qrcodes
         auto frameID = GetImageMsg().header.frame_id;
@@ -214,6 +236,8 @@ void ScanCurrentImg()
         }
 
         SetQrCodesData(qrCodeData);
+    } else{
+        ROS_WARN_STREAM("QRCodeReferencer: Got no image information!");
     }
 
 }
@@ -259,6 +283,19 @@ bool GetQRPoseService(qrcode_referencer::GetQRPoseRequest &request, qrcode_refer
 void Init()
 {
     InitParams();
+
+    if (paramQRCodeMode.GetValue())
+    {
+        _scanner.push_back(new QRScanner(parameterHandler));
+    };
+
+    if (paramAprilTagMode.GetValue())
+    {
+        _scanner.push_back(new AprilTagScanner(parameterHandler));
+    };
+
+
+
 }
 
 void PublishSimulatedQR()
@@ -311,7 +348,7 @@ void PublishSimulatedQR()
     simulatedData.frameName ="simulatedQR4";
     qrCodeData.push_back(simulatedData);
 
-    SetQrCodesData(qrCodeData);
+    _transformManager->AddQrCodesData(qrCodeData);
 
 }
 
@@ -325,7 +362,7 @@ int main(int argc, char **argv)
     Init();
 
     //define subcriber
-    subCameraInfo = node->subscribe("/depthcam1/rgb/camera_info", 1, cameraInfoCallback);
+    subCameraInfo = node->subscribe("/depthcam1/color/camera_info", 1, cameraInfoCallback);
     ROS_INFO_STREAM("Listening to CameraInfo-Topic: " << subCameraInfo.getTopic());
     subImageMessage = node->subscribe("/depthcam1/color/image_raw", 1, imageCallback);
     ROS_INFO_STREAM("Listening to RGBImage-Topic: " << subImageMessage.getTopic());

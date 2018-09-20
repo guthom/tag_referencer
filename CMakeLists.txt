@@ -89,11 +89,12 @@ include_directories(include ${catkin_INCLUDE_DIRS}
 
 #SET GLOBAL DEPENDECIES and Links
 set(LINKLIBS)
-set(GLOB_LINKLIBS ${catkin_LIBRARIES} zbar ${Eigen_LIBRARIES})
+set(GLOB_LINKLIBS ${catkin_LIBRARIES} zbar ${Eigen_LIBRARIES} custom_parameter)
 set(SUBLIBS)
 set(GLOB_DEPENDENCIES 
     ${PROJECT_NAME}_generate_messages
     ${catkin_EXPORTED_TARGETS}
+    custom_parameter
         )
 
 #read all directories as submodules
@@ -117,6 +118,11 @@ SET(NODENAME qrcode_referencer)
 add_executable(${NODENAME} ${SRC_PREFIX}${NODENAME}.cpp)
 add_dependencies(${NODENAME} ${GLOB_DEPENDENCIES})
 target_link_libraries(${NODENAME} ${LINKLIBS} ${GLOB_LINKLIBS})
+
+SET(NODENAME box_detector)
+add_executable(${NODENAME} ${SRC_PREFIX}${NODENAME}.cpp)
+add_dependencies(${NODENAME} ${GLOB_DEPENDENCIES})
+target_link_libraries(${NODENAME} ${LINKLIBS} ${GLOB_LINKLIBS} ${HALCON_LIBRARIES})
 
 #manage installation e.g. all include files
 #install(TARGETS ${PROJECT_NAME}

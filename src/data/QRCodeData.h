@@ -23,6 +23,7 @@ public:
     std::string cameraFrameID = "world";
     std::vector<Eigen::Vector2i> points;
     std::vector<Eigen::Vector3f> points3D;
+    float refSize = 0.0f;
     geometry_msgs::Pose framePose;
     geometry_msgs::Pose qrPose;
 

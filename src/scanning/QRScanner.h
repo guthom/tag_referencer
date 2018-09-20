@@ -3,7 +3,6 @@
 
 #include <string.h>
 #include "zbar.h"
-
 #include "ScannerBase.h"
 
 using namespace zbar;
@@ -12,7 +11,7 @@ using namespace cv;
 class QRScanner
         : public ScannerBase {
     public:
-        QRScanner();
+        QRScanner(customparameter::ParameterHandler* paramHandler);
         ~QRScanner();
 
         virtual std::vector<QRCodeData> ScanCurrentImg(Mat cvImage);
@@ -23,6 +22,8 @@ class QRScanner
         ImageScanner imgScanner;
 
         void Init();
+
+        void InitParams();
 
         void ProcessRawString(std::string rawString, QRCodeData* retData);
         zbar::Image* CreateZBarImage(cv::Mat* image);

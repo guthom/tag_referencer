@@ -3,3 +3,8 @@
 //
 
 #include "ScannerBase.h"
+
+ScannerBase::ScannerBase(customparameter::ParameterHandler* paramHandler) : _paramHandler(paramHandler)
+{
+
+}

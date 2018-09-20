@@ -1,0 +1,14 @@
+<launch>	
+	<!--Set Path for the experiment-bags here--> 
+	<arg name="path" default="/home/$(env USER)/ROS/BagFiles/qrCodeReferencer/" />
+	<arg name="filename" default="$(arg filename).bag" />
+    
+	<arg name="topics" default="/depthcam1/color/image_raw/ 
+								/depthcam1/color/camera_info/
+								/depthcam1/depth_registered/points
+								/tf 
+								/joint_state 
+								"/>	  
+	<node pkg="rosbag" type="record" name="record" args="-o $(arg path)$(arg filename) $(arg topics)" output="screen"/>	  	  
+</launch>
+	
