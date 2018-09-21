@@ -47,6 +47,7 @@ find_package(catkin REQUIRED
     custom_parameter
     pcl_conversions
     pcl_ros
+    apriltags2_ros
     )
 
 find_package(Eigen3 REQUIRED)

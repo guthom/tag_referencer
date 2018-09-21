@@ -145,7 +145,7 @@ void InitParams()
     paramPublishMarkedPointCloud = parameterHandler->AddParameter("PublishMarkedPointCloud", "", false);
     paramPublishMarkedImage = parameterHandler->AddParameter("PublishMarkedImage", "", true);
     paramSimulationMode = parameterHandler->AddParameter("SimulationMode", "", false);
-    paramQRCodeMode = parameterHandler->AddParameter("QRCodeMode", "", true);
+    paramQRCodeMode = parameterHandler->AddParameter("QRCodeMode", "", false);
     paramAprilTagMode = parameterHandler->AddParameter("AprilTagMode", "", true);
 }
 
@@ -206,10 +206,7 @@ void MarkImage()
     {
         cv::Mat markedImage = GetCvImage();
 
-        for (int i = 0; i < _scanner.size(); i++)
-        {
-            markedImage = _scanner[i]->MarkImage(GetQrCodesData(), paramReferenceCorner.GetValue(), markedImage);
-        }
+        ScannerBase::MarkImage(GetQrCodesData(), paramReferenceCorner.GetValue(), markedImage);
 
         PublishMarkedImage(markedImage);
     }

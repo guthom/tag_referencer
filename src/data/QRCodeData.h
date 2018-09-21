@@ -7,17 +7,22 @@
 #include <geometry_msgs/Pose.h>
 #include <Eigen/Geometry>
 
+
+
 class QRCodeData
 {
 public:
-    QRCodeData();
 
+    enum TagType {QRCode, AprilTag, Unknown};
+
+    QRCodeData();
     ~QRCodeData();
 
 public:
     bool success = false;
     int id;
     int refrenceCounter = 1;
+    TagType tagType = Unknown;
     std::string info = "";
     std::string frameName = "";
     std::string cameraFrameID = "world";

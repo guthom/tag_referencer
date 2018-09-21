@@ -15,9 +15,11 @@ class QRScanner
         ~QRScanner();
 
         virtual std::vector<QRCodeData> ScanCurrentImg(Mat cvImage);
-        virtual cv::Mat MarkImage(std::vector<QRCodeData> qrCodesData, int referenceCorner, cv::Mat image);
 
     private:
+
+        QRCodeData::TagType tagType = QRCodeData::TagType::QRCode;
+
         //zbar stuf
         ImageScanner imgScanner;
 

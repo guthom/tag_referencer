@@ -7,8 +7,11 @@
 
 #include <custom_parameter/parameter.h>
 
+#include <apriltag.h>
+
 using namespace cv;
 using namespace customparameter;
+
 
 class AprilTagScanner
         : public ScannerBase {
@@ -17,20 +20,31 @@ class AprilTagScanner
         ~AprilTagScanner();
 
         virtual std::vector<QRCodeData> ScanCurrentImg(Mat cvImage);
-        virtual cv::Mat MarkImage(std::vector<QRCodeData> qrCodesData, int referenceCorner, cv::Mat image);
 
     private:
 
+        QRCodeData::TagType tagType = QRCodeData::TagType::AprilTag;
+
         void Init();
+
+        //ParamStuff
         void InitParams();
         Parameter<std::string> paramTagFamily;
-        Parameter<int> paramTagBoarder;
+        Parameter<int> paramTagBorder;
         Parameter<int> paramTagThreads;
         Parameter<bool> paramRefineEdges;
         Parameter<bool> paramRefineDecode;
         Parameter<bool> paramRefinePose;
         Parameter<float> paramTagDecimate;
-        Parameter<float> paramTagBlur;
+        Parameter<float> paramTagSigma;
+
+        //AprilTags stuff
+        apriltag_family *atFamily;
+        apriltag_detector *atDetector;
+
+        void CheckTagFamily();
+        void ReleaseTagFamily();
+        void InitDetector();
 
 };
 

@@ -11,6 +11,7 @@
 #include <custom_parameter/parameterHandler.h>
 #include <custom_parameter/parameter.h>
 
+
 class ScannerBase
 {
 public:
@@ -18,9 +19,12 @@ public:
 
 
     virtual std::vector<QRCodeData> ScanCurrentImg(cv::Mat cvImage) = 0;
-    virtual cv::Mat MarkImage(std::vector<QRCodeData> qrCodesData, int referenceCorner, cv::Mat image) = 0;
+    cv::Mat static MarkImage(std::vector<QRCodeData> qrCodesData, int referenceCorner, cv::Mat image);
 
 protected:
+
+    QRCodeData::TagType tagType = QRCodeData::TagType::Unknown;
+
     customparameter::ParameterHandler* _paramHandler;
     customparameter::Parameter<float> paramReferenceSize;
 
