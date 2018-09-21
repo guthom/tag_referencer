@@ -8,6 +8,7 @@ QRScanner::QRScanner(customparameter::ParameterHandler* paramHandler) : ScannerB
 
 void QRScanner::Init()
 {
+    InitParams();
     //TODO: maybe theres a better parameterset for the configuration
     imgScanner.set_config(ZBAR_QRCODE, ZBAR_CFG_ENABLE, 1);
 }
@@ -15,9 +16,9 @@ void QRScanner::Init()
 void QRScanner::InitParams()
 {
     //init params
-    std::string subNamespace = "QRCodeScanner";
+    std::string subNamespace = "QRCodeScanner/";
     //Standard params
-    ScannerBase::paramReferenceSize = _paramHandler->AddParameter("ReferenceSize", "", (float)0.0f);
+    paramReferenceSize = _paramHandler->AddParameter(subNamespace + "ReferenceSize", "", (float)0.0f);
 
 }
 

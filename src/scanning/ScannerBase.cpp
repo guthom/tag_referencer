@@ -27,7 +27,7 @@ cv::Mat ScannerBase::MarkImage(std::vector<QRCodeData> qrCodesData, int referenc
     for (int i = 0; i < qrCodesData.size(); i++)
     {
         Point center = Point(qrCodesData[i].points[3][0], qrCodesData[i].points[3][1]);
-        center.x += 25;
+        center.x += 60;
         center.y += 0;
 
         //set text with frame name

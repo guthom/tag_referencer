@@ -26,9 +26,7 @@
         <arg name="color_height"      value="$(arg height)"/>
     </include>
 
+    <rosparam command="load" file="$(find qrcode_referencer)/config/settings.yaml" />
     <include file="$(find qrcode_referencer)/launch/qrcode_referencer.launch">
-        <arg name="simulateQRCode" value="false"/>
-        <arg name="AprilTagMode" value="true"/>
-        <arg name="QRCodeMode" value="false"/>
     </include>
 </launch>

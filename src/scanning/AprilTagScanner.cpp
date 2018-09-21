@@ -77,18 +77,17 @@ void AprilTagScanner::CheckTagFamily()
 void AprilTagScanner::InitParams()
 {
     //init params
-    std::string subNamespace = "ApriTagScanner";
+    std::string subNamespace = "ApriTagScanner/";
     //Standard params
-    ScannerBase::paramReferenceSize = _paramHandler->AddParameter("ReferenceSize", "", (float)0.0f);
-
-    paramTagFamily = _paramHandler->AddParameter("TagFamily", "", (std::string)"tag36h11");
-    paramTagBorder = _paramHandler->AddParameter("TagBorder", "", 1);
-    paramTagThreads = _paramHandler->AddParameter("TagThreads", "", 2);
-    paramRefineEdges = _paramHandler->AddParameter("RefineEdges", "", true);
-    paramRefineDecode = _paramHandler->AddParameter("RefineDecode", "", false);
-    paramRefinePose = _paramHandler->AddParameter("RefinePose", "", false);
-    paramTagDecimate = _paramHandler->AddParameter("TagDecimate", "", (float)1.0f);
-    paramTagSigma = _paramHandler->AddParameter("TagBlur", "", (float)0.0f);
+    paramReferenceSize = _paramHandler->AddParameter(subNamespace + "ReferenceSize", "", (float)0.0f);
+    paramTagFamily = _paramHandler->AddParameter(subNamespace + "TagFamily", "", (std::string)"tag36h11");
+    paramTagBorder = _paramHandler->AddParameter(subNamespace + "TagBorder", "", 1);
+    paramTagThreads = _paramHandler->AddParameter(subNamespace + "TagThreads", "", 2);
+    paramRefineEdges = _paramHandler->AddParameter(subNamespace + "RefineEdges", "", true);
+    paramRefineDecode = _paramHandler->AddParameter(subNamespace + "RefineDecode", "", false);
+    paramRefinePose = _paramHandler->AddParameter(subNamespace + "RefinePose", "", false);
+    paramTagDecimate = _paramHandler->AddParameter(subNamespace + "TagDecimate", "", (float)1.0f);
+    paramTagSigma = _paramHandler->AddParameter(subNamespace + "TagBlur", "", (float)0.0f);
 }
 
 /// Scannes an cv::Mat image for QRCodes

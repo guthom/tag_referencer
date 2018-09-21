@@ -139,13 +139,13 @@ void InitParams()
     parameterHandler = new customparameter::ParameterHandler(node);
     std::string subNamespace = "";
     //Standard params
-    paramRefreshRate = parameterHandler->AddParameter("RefreshRate", "", (int)15);
+    paramRefreshRate = parameterHandler->AddParameter("RefreshRate", "", (int)30);
     paramReferenceCorner = parameterHandler->AddParameter("ReferenceCorner", "", (int)1);
     paramServiceMode = parameterHandler->AddParameter("ServiceMode", "", false);
     paramPublishMarkedPointCloud = parameterHandler->AddParameter("PublishMarkedPointCloud", "", false);
     paramPublishMarkedImage = parameterHandler->AddParameter("PublishMarkedImage", "", true);
     paramSimulationMode = parameterHandler->AddParameter("SimulationMode", "", false);
-    paramQRCodeMode = parameterHandler->AddParameter("QRCodeMode", "", false);
+    paramQRCodeMode = parameterHandler->AddParameter("QRCodeMode", "", true);
     paramAprilTagMode = parameterHandler->AddParameter("AprilTagMode", "", true);
 }
 
@@ -222,8 +222,11 @@ void ScanCurrentImg()
         {
             std::vector<QRCodeData>  newQRCodeData = _scanner[i]->ScanCurrentImg(currentImage);
 
-            qrCodeData.reserve(qrCodeData.size() + newQRCodeData.size());
-            qrCodeData.insert(std::end(qrCodeData), std::begin(newQRCodeData), std::end(newQRCodeData));
+            if (newQRCodeData.size() > 0)
+            {
+                qrCodeData.reserve(qrCodeData.size() + newQRCodeData.size());
+                qrCodeData.insert(std::end(qrCodeData), std::begin(newQRCodeData), std::end(newQRCodeData));
+            }
         }
 
         //set reference frame for all qrcodes
@@ -290,8 +293,6 @@ void Init()
     {
         _scanner.push_back(new AprilTagScanner(parameterHandler));
     };
-
-
 
 }
 
