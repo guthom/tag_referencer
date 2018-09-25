@@ -52,16 +52,7 @@ void QRScanner::ProcessRawString(std::string rawString, QRCodeData* retData)
         {
             retData->id = std::stoi(qrCode[0]);
             retData->success = true;
-            //retData->info=qrCode[1];
             retData->frameName=qrCode[1];
-            //parse framePose given within the qrcode information
-            //retData->framePose.position.x = std::stof(qrCode[3]);
-            //retData->framePose.position.y = std::stof(qrCode[4]);
-            //retData->framePose.position.z = std::stof(qrCode[5]);
-            //retData->framePose.orientation.x = std::stof(qrCode[6]);
-            //retData->framePose.orientation.y = std::stof(qrCode[7]);
-            //retData->framePose.orientation.z = std::stof(qrCode[8]);
-            //retData->framePose.orientation.w = std::stof(qrCode[9]);
         }
         catch (const std::exception& e)
         {

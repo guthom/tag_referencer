@@ -140,12 +140,12 @@ void InitParams()
     std::string subNamespace = "";
     //Standard params
     paramRefreshRate = parameterHandler->AddParameter("RefreshRate", "", (int)30);
-    paramReferenceCorner = parameterHandler->AddParameter("ReferenceCorner", "", (int)1);
+    paramReferenceCorner = parameterHandler->AddParameter("ReferenceCorner", "", (int)0);
     paramServiceMode = parameterHandler->AddParameter("ServiceMode", "", false);
     paramPublishMarkedPointCloud = parameterHandler->AddParameter("PublishMarkedPointCloud", "", false);
     paramPublishMarkedImage = parameterHandler->AddParameter("PublishMarkedImage", "", true);
     paramSimulationMode = parameterHandler->AddParameter("SimulationMode", "", false);
-    paramQRCodeMode = parameterHandler->AddParameter("QRCodeMode", "", true);
+    paramQRCodeMode = parameterHandler->AddParameter("QRCodeMode", "", false);
     paramAprilTagMode = parameterHandler->AddParameter("AprilTagMode", "", true);
 }
 
@@ -308,19 +308,22 @@ void PublishSimulatedQR()
     simulatedData.qrPose.position.y = 0.3;
     simulatedData.qrPose.position.z = 0.8;
 
-    simulatedData.qrPose.orientation.w =  0.643;
-    simulatedData.qrPose.orientation.x = 0.0;
-    simulatedData.qrPose.orientation.y = -0.766;
-    simulatedData.qrPose.orientation.z = 0.0;
+    simulatedData.qrPose.orientation.x = 0.478023;
+    simulatedData.qrPose.orientation.y = -0.5422;
+    simulatedData.qrPose.orientation.z = 0.573638;
+    simulatedData.qrPose.orientation.w = -0.385267;
+
+
     //append simualted Pose information
     qrCodeData.push_back(simulatedData);
 
     simulatedData.qrPose.position.y = -0.2;
 
-    simulatedData.qrPose.orientation.w = 0.633;
-    simulatedData.qrPose.orientation.x = -0.112;
-    simulatedData.qrPose.orientation.y = -0.754;
-    simulatedData.qrPose.orientation.z = 0.133;
+    simulatedData.qrPose.orientation.x =  0.751341;
+    simulatedData.qrPose.orientation.y = 0.0315404;
+    simulatedData.qrPose.orientation.z = 0.65891;
+    simulatedData.qrPose.orientation.w = 0.0181433;
+
     simulatedData.frameName ="simulatedQR1";
     qrCodeData.push_back(simulatedData);
 
@@ -329,20 +332,21 @@ void PublishSimulatedQR()
     qrCodeData.push_back(simulatedData);
 
     simulatedData.qrPose.position.z = 0.3;
-    simulatedData.qrPose.orientation.w = 0.766;
-    simulatedData.qrPose.orientation.x = -0.0;
-    simulatedData.qrPose.orientation.y = -0.643;
-    simulatedData.qrPose.orientation.z = 0.0;
+    simulatedData.qrPose.orientation.x = 0.478023;
+    simulatedData.qrPose.orientation.y = -0.5422;
+    simulatedData.qrPose.orientation.z = 0.573638;
+    simulatedData.qrPose.orientation.w = -0.385267;
     simulatedData.frameName ="simulatedQR3";
     qrCodeData.push_back(simulatedData);
 
     simulatedData.qrPose.position.z = 0.5;
     simulatedData.qrPose.position.x = 1.0;
     simulatedData.qrPose.position.y = 0.0;
-    simulatedData.qrPose.orientation.w = 0.633;
-    simulatedData.qrPose.orientation.x = 0.112;
-    simulatedData.qrPose.orientation.y = -0.754;
-    simulatedData.qrPose.orientation.z = -0.133;
+
+    simulatedData.qrPose.orientation.x =  0.751341;
+    simulatedData.qrPose.orientation.y = 0.0315404;
+    simulatedData.qrPose.orientation.z = 0.65891;
+    simulatedData.qrPose.orientation.w = 0.0181433;
     simulatedData.frameName ="simulatedQR4";
     qrCodeData.push_back(simulatedData);
 

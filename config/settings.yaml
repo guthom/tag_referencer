@@ -16,16 +16,16 @@ ApriTagScanner:
 AprilTagMode: true,
 PublishMarkedImage: true,
 PublishMarkedPointCloud: false,
-QRCodeMode: true,
+QRCodeMode: false,
 QRCodeScanner:
    {
      ReferenceSize: 0.0
     },
 
 ReferenceCorner: 0,
-RefreshRate: 60,
+RefreshRate: 30,
 ServiceMode: false,
-SimulationMode: false,
+SimulationMode: true,
 transformation_manager: 
   {
     RefreshRate: 30

@@ -16,9 +16,9 @@ void PoseDerivator::Init()
 
 /// Calculates the Orientation of the QR-Code by calcualting a plane with the given LGS
 /// The orientation will allways be facing from corner 1 to corner 0
-/// 0 -  3
+/// 3 -  2
 /// | QR |
-/// 1 -  2
+/// 0 -  1
 /// \param points, given points to derive the plane in R3
 /// \return
 geometry_msgs::Quaternion CalculateOrientation(std::vector<Eigen::Vector3f> points)
@@ -27,22 +27,22 @@ geometry_msgs::Quaternion CalculateOrientation(std::vector<Eigen::Vector3f> poin
     geometry_msgs::Quaternion ret;
 
     //calculate unit vectors of new coordinate system
-    Vector3f xVec = points[2] - points[1];
+    Vector3f xVec = points[3] - points[0];
     xVec.normalize();
-    Vector3f yVec = points[0] - points[1];
+    Vector3f yVec = points[1] - points[0];
     yVec.normalize();
     //Calculate Z Unit Vector by normalize cross product of other x/y vectors -> normal for x/y plane
     Vector3f zVec = xVec.cross(yVec);
     zVec.normalize();
 
-    float rot1, rot2, rot3;
-    rot1 = acosf(Vector3f::UnitX().dot(xVec));
-    rot2 = acosf(Vector3f::UnitY().dot(yVec));
-    rot3 = acosf(Vector3f::UnitZ().dot(zVec));
 
-    Eigen::Quaternionf  quat =  AngleAxisf(rot1, Vector3f::UnitZ()) *
-                                AngleAxisf(rot2, Vector3f::UnitY()) *
-                                AngleAxisf(rot3, Vector3f::UnitZ());
+    Eigen::Matrix3f mat;
+
+    mat <<  xVec[0],  yVec[0],  zVec[0],
+            xVec[1],  yVec[1],  zVec[1],
+            xVec[2],  yVec[2],  zVec[2];
+
+    Eigen::Quaternionf quat(mat);
 
     ret.x = quat.x();
     ret.y = quat.y();
