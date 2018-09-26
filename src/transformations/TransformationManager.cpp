@@ -69,7 +69,13 @@ void TransformationManager::PublishTransforms()
         transform.transform.translation.y = pose.position.y;
         transform.transform.translation.z = pose.position.z;
 
-        _tfBroadcaster->sendTransform(transform);
+        if (transform.transform.rotation.w != NAN)
+        {
+            _tfBroadcaster->sendTransform(transform);
+        } else
+        {
+            ROS_INFO_STREAM("qrcode_referencer: Got NAN value in Transformation!");
+        }
     }
 }
 
