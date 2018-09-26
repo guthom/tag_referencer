@@ -220,7 +220,14 @@ void ScanCurrentImg()
 
         for (int i = 0; i < _scanner.size(); i++)
         {
-            std::vector<QRCodeData>  newQRCodeData = _scanner[i]->ScanCurrentImg(currentImage);
+            std::vector<QRCodeData> newQRCodeData = _scanner[i]->ScanCurrentImg(currentImage);
+
+            //reload image and scan again if first scan fails
+            if (newQRCodeData.size() == 0)
+            {
+                currentImage = GetCvImage();
+                newQRCodeData = _scanner[i]->ScanCurrentImg(currentImage);
+            }
 
             if (newQRCodeData.size() > 0)
             {
