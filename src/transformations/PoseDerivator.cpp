@@ -1,9 +1,6 @@
 #include "PoseDerivator.h"
 
-#include <Eigen/Geometry>
 #include <Eigen/Dense>
-#include <math.h>
-#include <tf/LinearMath/Quaternion.h>
 
 PoseDerivator::PoseDerivator()
 {
@@ -16,9 +13,9 @@ void PoseDerivator::Init()
 
 /// Calculates the Orientation of the QR-Code by calcualting a plane with the given LGS
 /// The orientation will allways be facing from corner 1 to corner 0
-/// 3 -  2
-/// | QR |
-/// 0 -  1
+/// 3 - 2
+/// | 5 |
+/// 0 - 1
 /// \param points, given points to derive the plane in R3
 /// \return
 geometry_msgs::Quaternion CalculateOrientation(std::vector<Eigen::Vector3f> points)
@@ -75,6 +72,7 @@ std::vector<QRCodeData> PoseDerivator::CalculateQRPose(std::vector<QRCodeData> q
                 memcpy(&point[2], &pointCloud.data[arrayPosZ], sizeof(float));
 
                 qrCodesData[i].points3D.push_back(point);
+                //add center as fith point
             }
 
             //set position of pose to choosen reference point

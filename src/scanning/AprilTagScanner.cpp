@@ -137,6 +137,7 @@ std::vector<QRCodeData> AprilTagScanner::ScanCurrentImg(cv::Mat cvImage)
                 points.push_back(point);
             }
 
+            points.push_back(CalculateCenter(points));
             data.points = points;
 
             aprilTags.push_back(data);

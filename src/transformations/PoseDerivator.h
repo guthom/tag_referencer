@@ -6,6 +6,7 @@
 #include <geometry_msgs/Transform.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Quaternion.h>
+#include <geometry_msgs/Vector3.h>
 
 #include "../data/QRCodeData.h"
 
@@ -28,7 +29,8 @@ public:
 private:
 
     void Init();
-    geometry_msgs::Transform PoseToTransform(geometry_msgs::Pose pose);
+
+
 };
 
 #endif // POSEDERIVATOR_H

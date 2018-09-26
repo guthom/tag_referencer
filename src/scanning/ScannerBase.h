@@ -28,6 +28,8 @@ protected:
     customparameter::ParameterHandler* _paramHandler;
     customparameter::Parameter<float> paramReferenceSize;
 
+    Eigen::Vector2i CalculateCenter(std::vector<Eigen::Vector2i> points);
+
 };
 
 

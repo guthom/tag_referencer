@@ -110,6 +110,7 @@ std::vector<QRCodeData> QRScanner::ScanCurrentImg(cv::Mat cvImage)
                 points.push_back(point);
             }
 
+            points.push_back(CalculateCenter(points));
             entry.points = points;
 
             qrCodes.push_back(entry);
