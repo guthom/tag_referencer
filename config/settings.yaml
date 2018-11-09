@@ -22,7 +22,7 @@ QRCodeScanner:
      ReferenceSize: 0.0
     },
 
-ReferenceCorner: 0,
+ReferenceCorner: 4,
 RefreshRate: 30,
 ServiceMode: false,
 SimulationMode: false,

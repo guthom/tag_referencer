@@ -1,7 +1,4 @@
 #include "TransformationManager.h"
-#include <boost/thread.hpp>
-
-#include <geometry_msgs/TransformStamped.h>
 
 TransformationManager::TransformationManager(ros::NodeHandle* parentNode, customparameter::ParameterHandler* parameterHandler)
     : _parameterHandler(parameterHandler)
@@ -15,13 +12,16 @@ void TransformationManager::Init(ros::NodeHandle* parentNode)
     _node = new ros::NodeHandle(*parentNode, _nodeName);
 
     //run node
+    _transformationHandler = new helper::TransformationHandler(_node);
     _nodeThread = new boost::thread(boost::bind(&TransformationManager::Run,this));
+
 }
 
 void TransformationManager::InitParameter()
 {
     std::string subNamespace = _nodeName + "/";
     _paramRefreshRate = _parameterHandler->AddParameter("RefreshRate", subNamespace, "", int(5));
+    _paramPoseErrorFactor = _parameterHandler->AddParameter("PoseErrorFactor", subNamespace, "", 0.1f);
 }
 
 void TransformationManager::InitRosStuff()
@@ -69,12 +69,15 @@ void TransformationManager::PublishTransforms()
         transform.transform.translation.y = pose.position.y;
         transform.transform.translation.z = pose.position.z;
 
-        if (transform.transform.rotation.w != NAN)
+
+        if (std::isnan(transform.transform.rotation.w) || transform.transform.rotation.w == 0.0 ||
+                std::isnan(transform.transform.translation.x))
         {
-            _tfBroadcaster->sendTransform(transform);
-        } else
+            //ROS_INFO_STREAM("qrcode_referencer: Got NAN value in Transformation!");
+        }
+        else
         {
-            ROS_INFO_STREAM("qrcode_referencer: Got NAN value in Transformation!");
+            _transformationHandler->SendStableTransform(transform, _paramPoseErrorFactor.GetValue());
         }
     }
 }
@@ -88,7 +91,6 @@ void TransformationManager::Run()
 
     //init mutex in  the same thread
     _qrCodeMutex = new boost::mutex();
-    _tfBroadcaster = new tf2_ros::TransformBroadcaster();
 
     ROS_INFO_STREAM("Starting " + _nodeName + " node");
 

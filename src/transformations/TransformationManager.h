@@ -10,7 +10,7 @@
 #include <custom_parameter/parameterHandler.h>
 #include <custom_parameter/parameter.h>
 
-#include <tf2_ros/transform_broadcaster.h>
+#include "../helper/TransformationHandler.h"
 #include "../data/QRCodeData.h"
 
 class TransformationManager
@@ -31,6 +31,7 @@ private:
     //parameter stuff
     customparameter::ParameterHandler* _parameterHandler;
     customparameter::Parameter<int> _paramRefreshRate;
+    customparameter::Parameter<float> _paramPoseErrorFactor;
 
     void Init(ros::NodeHandle* parentNode);
     void InitParameter();
@@ -38,7 +39,7 @@ private:
 
     //transform stuff
     void PublishTransforms();
-    tf2_ros::TransformBroadcaster* _tfBroadcaster;
+    helper::TransformationHandler* _transformationHandler;
 
     //qrcode stuff
     boost::mutex* _qrCodeMutex; //qrCode mutex for accessing qrCode elements
