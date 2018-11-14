@@ -371,11 +371,11 @@ int main(int argc, char **argv)
     Init();
 
     //define subcriber
-    subCameraInfo = node->subscribe("/depthcam1/color/camera_info", 1, cameraInfoCallback);
+    subCameraInfo = node->subscribe(node->resolveName("/depthcam/color/camera_info"), 1, cameraInfoCallback);
     ROS_INFO_STREAM("Listening to CameraInfo-Topic: " << subCameraInfo.getTopic());
-    subImageMessage = node->subscribe("/depthcam1/color/image_raw", 1, imageCallback);
+    subImageMessage = node->subscribe(node->resolveName("/depthcam/color/image_raw"), 1, imageCallback);
     ROS_INFO_STREAM("Listening to RGBImage-Topic: " << subImageMessage.getTopic());
-    subDepthImageMessage = node->subscribe("/depthcam1/depth_registered/points", 1, depthCloudCallback);
+    subDepthImageMessage = node->subscribe(node->resolveName("/depthcam/depth_registered/points"), 1, depthCloudCallback);
     ROS_INFO_STREAM("Listening to DepthImage-Topic: " << subDepthImageMessage.getTopic());
 
     //define publisher

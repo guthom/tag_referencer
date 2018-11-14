@@ -28,6 +28,7 @@ ServiceMode: false,
 SimulationMode: false,
 transformation_manager: 
   {
-    RefreshRate: 30
+    RefreshRate: 30,
+    PoseErrorFactor: 0.1
   },
 }
