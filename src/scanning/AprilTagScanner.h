@@ -37,6 +37,7 @@ class AprilTagScanner
         Parameter<bool> paramRefinePose;
         Parameter<float> paramTagDecimate;
         Parameter<float> paramTagSigma;
+        Parameter<std::string> paramTagPrefix;
 
         //AprilTags stuff
         apriltag_family *atFamily;

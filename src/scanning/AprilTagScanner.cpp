@@ -88,6 +88,8 @@ void AprilTagScanner::InitParams()
     paramRefinePose = _paramHandler->AddParameter(subNamespace + "RefinePose", "", false);
     paramTagDecimate = _paramHandler->AddParameter(subNamespace + "TagDecimate", "", (float)1.0f);
     paramTagSigma = _paramHandler->AddParameter(subNamespace + "TagBlur", "", (float)0.0f);
+    std::string defaultString = "boxApril_";
+    paramTagPrefix = _paramHandler->AddParameter("TagPrefix", "", defaultString);
 }
 
 /// Scannes an cv::Mat image for QRCodes

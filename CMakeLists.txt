@@ -34,9 +34,10 @@ foreach(service ${RAW_SERVICES})
 ENDFOREACH()
 MESSAGE(STATUS "Found ROS-Services: " ${SERVICES})
 
+find_package(OpenCV REQUIRED)
+
 #find catkin packages
 find_package(catkin REQUIRED
-    OpenCV
     message_generation
     roscpp
     geometry_msgs
@@ -96,6 +97,7 @@ set(GLOB_DEPENDENCIES
     ${PROJECT_NAME}_generate_messages
     ${catkin_EXPORTED_TARGETS}
     custom_parameter
+
         )
 
 #read all directories as submodules
@@ -116,7 +118,7 @@ ENDFOREACH()
 
 #create axecutable and set dependencies
 SET(NODENAME qrcode_referencer)
-add_executable(${NODENAME} ${SRC_PREFIX}${NODENAME}.cpp)
+add_executable(${NODENAME} ${SRC_PREFIX}${NODENAME}.cpp )
 add_dependencies(${NODENAME} ${GLOB_DEPENDENCIES})
 target_link_libraries(${NODENAME} ${LINKLIBS} ${GLOB_LINKLIBS})
 
@@ -124,6 +126,11 @@ SET(NODENAME box_detector)
 add_executable(${NODENAME} ${SRC_PREFIX}${NODENAME}.cpp)
 add_dependencies(${NODENAME} ${GLOB_DEPENDENCIES})
 target_link_libraries(${NODENAME} ${LINKLIBS} ${GLOB_LINKLIBS} ${HALCON_LIBRARIES})
+
+SET(NODENAME april_calibrator)
+add_executable(${NODENAME} ${SRC_PREFIX}${NODENAME}.cpp )
+add_dependencies(${NODENAME} ${GLOB_DEPENDENCIES})
+target_link_libraries(${NODENAME} ${LINKLIBS} ${GLOB_LINKLIBS})
 
 #manage installation e.g. all include files
 #install(TARGETS ${PROJECT_NAME}
