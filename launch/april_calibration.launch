@@ -1,0 +1,63 @@
+<launch>
+ <!--launch realsense-->
+  <arg name="width" default="640"/>
+  <arg name="height" default="480"/>     
+  <arg name="fps" default="30"/> 
+  
+  <!--Publish static transform to calibration target-->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="calib_traget_link" args="0.095 0.0 0.0 0.0 0.0 0.0 1.0 /ee_link /calib_target"/>
+   
+  <group ns="depthcam1">
+  <arg name="cameraName" value="depthcam1"/>
+    <!--node pkg="tf2_ros" type="static_transform_publisher" name="$(arg cameraName)_link_tf1" args="-0.04167592 0.12628078 -0.12417453 -0.449640650558 -0.438165235781 -0.559914792172 0.540675445185 /world /$(arg cameraName)_link_temp"/>  
+    <node pkg="tf2_ros" type="static_transform_publisher" name="$(arg cameraName)_link_tf2" args="0 0 0 0.5 -0.5 0.5 0.5 /$(arg cameraName)_link_temp /$(arg cameraName)_link_temp2"/>    
+    <node pkg="tf2_ros" type="static_transform_publisher" name="$(arg cameraName)_link_tf3" args="0.0 0.0 0.0 0.0 0.0 -0.032353 0.99948 /$(arg cameraName)_link_temp2 /$(arg cameraName)_link"/-->
+    <node pkg="tf2_ros" type="static_transform_publisher" name="$(arg cameraName)_link_tf3" args="0.0 0.0 0.0 0.0 0.0 0.0 1.0 /world /$(arg cameraName)_link"/>
+    
+    <include file="$(find realsense2_camera)/launch/rs_rgbd.launch">
+      <arg name="camera"            value="$(arg cameraName)"/>
+      <arg name="manager"             default="realsense2_camera_manager_$(arg cameraName)"/>
+      <arg name="json_file_path"      value="/home/thomas/ROS/RealSensCfg/kollro_415.json"/>
+
+      <arg name="fisheye_width"       value="$(arg width)"/>
+      <arg name="fisheye_height"      value="$(arg height)"/>
+      <arg name="enable_fisheye"      value="true"/>
+
+      <arg name="depth_width"         value="$(arg width)"/>
+      <arg name="depth_height"        value="$(arg height)"/>
+      <arg name="enable_depth"        value="true"/>
+
+      <arg name="infra1_width"        value="$(arg width)"/>
+      <arg name="infra1_height"       value="$(arg height)"/>
+      <arg name="enable_infra1"       value="true"/>
+
+      <arg name="infra2_width"        value="$(arg width)"/>
+      <arg name="infra2_height"       value="$(arg height)"/>
+      <arg name="enable_infra2"       value="true"/>
+
+      <arg name="color_width"         value="$(arg width)"/>
+      <arg name="color_height"        value="$(arg height)"/>
+      <arg name="enable_color"        value="true"/>
+
+      <arg name="fisheye_fps"         value="$(arg fps)"/>
+      <arg name="depth_fps"           value="$(arg fps)"/>
+      <arg name="infra1_fps"          value="$(arg fps)"/>
+      <arg name="infra2_fps"          value="$(arg fps)"/>
+      <arg name="color_fps"           value="$(arg fps)"/>
+      <arg name="gyro_fps"            value="1000"/>
+      <arg name="accel_fps"           value="1000"/>
+      <arg name="enable_imu"          value="false"/>
+
+      <arg name="enable_pointcloud"   value="false"/>
+      <arg name="enable_sync"         value="true"/>
+      <arg name="align_depth"         value="true"/>
+    </include>
+
+    <rosparam command="load" file="$(find qrcode_referencer)/config/settings_calib.yaml"/>
+    <node name="qrcode_referencer$(arg cameraName)" pkg="qrcode_referencer" type="april_calibrator" output="screen">
+      <remap from="/depthcam/color/camera_info" to="/$(arg cameraName)/$(arg cameraName)/color/camera_info"/>
+      <remap from="/depthcam/color/image_raw" to="/$(arg cameraName)/$(arg cameraName)/color/image_raw"/>
+      <remap from="/depthcam/depth_registered/points" to="/$(arg cameraName)/$(arg cameraName)/depth_registered/points"/>
+    </node>
+  </group>
+</launch>

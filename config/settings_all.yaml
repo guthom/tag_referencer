@@ -1,0 +1,29 @@
+ApriTagScanner: 
+  {
+  ReferenceSize: 0.0, 
+  RefineDecode: false, 
+  RefineEdges: true, 
+  RefinePose: false,
+  TagBlur: 0.0, 
+  TagBorder: 1, 
+  TagDecimate: 1.0, 
+  TagFamily: tag36h11, 
+  TagThreads: 2
+  }
+AprilTagMode: true
+PublishMarkedImage: true
+PublishMarkedPointCloud: false
+QRCodeMode: true
+QRCodeScanner:
+   {
+     ReferenceSize: 0.0
+    }
+
+ReferenceCorner: 1
+RefreshRate: 60
+ServiceMode: false
+SimulationMode: false
+transformation_manager: 
+  {
+    RefreshRate: 5
+  }

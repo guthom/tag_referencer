@@ -1,0 +1,36 @@
+april_calibrator:
+  {
+  CalibCount: 10,
+  CalibTargetID: 0, 
+  CaliTargetTfName: "calib_target",
+ApriTagScanner: 
+  {
+  ReferenceSize: 0.0, 
+  RefineDecode: false, 
+  RefineEdges: true, 
+  RefinePose: false,
+  TagBlur: 0.0, 
+  TagBorder: 1, 
+  TagDecimate: 1.0, 
+  TagFamily: tag36h11, 
+  TagThreads: 2
+  },
+AprilTagMode: true,
+PublishMarkedImage: true,
+PublishMarkedPointCloud: false,
+QRCodeMode: false,
+QRCodeScanner:
+   {
+     ReferenceSize: 0.0
+    },
+
+ReferenceCorner: 4,
+RefreshRate: 1,
+ServiceMode: false,
+SimulationMode: false,
+transformation_manager: 
+  {
+    RefreshRate: 30,
+    PoseErrorFactor: 0.1
+  },
+}

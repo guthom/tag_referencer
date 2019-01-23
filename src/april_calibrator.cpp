@@ -29,6 +29,7 @@
 #include "scanning/AprilTagScanner.h"
 #include "transformations/PoseDerivator.h"
 #include "transformations/TransformationManager.h"
+#include "helper/TransformationHandler.h"
 
 //common stuff
 std::string nodeName = "april_calibrator";
@@ -49,6 +50,7 @@ customparameter::Parameter<int> paramRefreshRate;
 customparameter::Parameter<int> paramReferenceCorner;
 customparameter::Parameter<int> paramCalibCount;
 customparameter::Parameter<int> paramCalibTagID;
+customparameter::Parameter<std::string> paramCalibTargetTfName;
 customparameter::Parameter<bool> paramServiceMode;
 customparameter::Parameter<bool> paramPublishMarkedImage;
 customparameter::Parameter<bool> paramPublishMarkedPointCloud;
@@ -63,6 +65,7 @@ PoseDerivator _poseDerivator;
 
 //Transformation manager
 TransformationManager* _transformManager;
+helper::TransformationHandler* _transformHandler;
 
 //qrCode data
 static boost::mutex _dataMutex;
@@ -146,10 +149,12 @@ void InitParams()
     parameterHandler = new customparameter::ParameterHandler(node);
     std::string subNamespace = "";
     //Standard params
-    paramRefreshRate = parameterHandler->AddParameter("RefreshRate", "", (int)1);
+    paramRefreshRate = parameterHandler->AddParameter("RefreshRate", "", (int)10);
     paramReferenceCorner = parameterHandler->AddParameter("ReferenceCorner", "", (int)0);
-    paramCalibCount = parameterHandler->AddParameter("CalibCount", "", (int)10);
-    paramCalibTagID = parameterHandler->AddParameter("CalibTargetName", "", 0);
+    paramCalibCount = parameterHandler->AddParameter("CalibCount", "", (int)100);
+    paramCalibTagID = parameterHandler->AddParameter("CalibTargetID", "", 0);
+    std::string defaultValue = "calib_target";
+    paramCalibTargetTfName = parameterHandler->AddParameter("CalibTargetTfName", "", defaultValue);
     paramMinPointDistance = parameterHandler->AddParameter("MinPointDistance", "", 0.01f);
     paramServiceMode = parameterHandler->AddParameter("ServiceMode", "", false);
     paramPublishMarkedPointCloud = parameterHandler->AddParameter("PublishMarkedPointCloud", "", false);
@@ -224,6 +229,10 @@ void MarkImage()
 
 void ScanCurrentImg()
 {
+    //get calib_target information
+    geometry_msgs::TransformStamped calibTransform =  _transformHandler->GetTransform("base_link",
+                                                                                 paramCalibTargetTfName.GetValue());
+
     cv::Mat currentImage = GetCvImage();
     if(!currentImage.empty()) {
         std::vector<QRCodeData> qrCodeData;
@@ -241,6 +250,11 @@ void ScanCurrentImg()
 
             if (newQRCodeData.size() > 0)
             {
+                for(int j = 0; j < newQRCodeData.size(); j++)
+                {
+                    newQRCodeData[j].calib_target = calibTransform;
+                }
+
                 qrCodeData.reserve(qrCodeData.size() + newQRCodeData.size());
                 qrCodeData.insert(std::end(qrCodeData), std::begin(newQRCodeData), std::end(newQRCodeData));
             }
@@ -301,27 +315,27 @@ void Calibrate()
     // 2D/3D points
     vector<Point2d> imagePoints;
     vector<Point3d> modelPoints;
+    int refernceCorner = paramReferenceCorner.GetValue();
 
     for(int i = 0; i < _calibTargets.size(); i++)
     {
         auto target = _calibTargets[i];
 
-        for(int j = 0; j < target.points.size(); j++)
-        {
-            imagePoints.push_back(Point2d(double(target.points[j][0]),
-                                           double(target.points[j][1])));
+        imagePoints.push_back(Point2d(double(target.points[refernceCorner][0]),
+                                       double(target.points[refernceCorner][1])));
 
-            ROS_INFO_STREAM(to_string(imagePoints[imagePoints.size()-1].x) + ", " +
-                                    to_string(imagePoints[imagePoints.size()-1].y));
+        //ROS_INFO_STREAM(to_string(imagePoints[imagePoints.size()-1].x) + ", " +
+        //                        to_string(imagePoints[imagePoints.size()-1].y));
 
-            modelPoints.push_back(Point3d(double(target.points3D[j][0]),
-                                           double(target.points3D[j][1]),
-                                           double(target.points3D[j][2])));
 
-            ROS_INFO_STREAM(to_string(modelPoints[modelPoints.size()-1].x) + ", " +
-                            to_string(modelPoints[modelPoints.size()-1].y)+ ", " +
-                            to_string(modelPoints[modelPoints.size()-1].z));
-        }
+        modelPoints.push_back(Point3d(target.calib_target.transform.translation.x,
+                                      target.calib_target.transform.translation.y,
+                                      target.calib_target.transform.translation.z));
+
+        //ROS_INFO_STREAM(to_string(modelPoints[modelPoints.size()-1].x) + ", " +
+        //                to_string(modelPoints[modelPoints.size()-1].y)+ ", " +
+        //                to_string(modelPoints[modelPoints.size()-1].z));
+        
     }
 
     if(imagePoints.size() != modelPoints.size())
@@ -357,9 +371,6 @@ void Calibrate()
     //inverse of translation
     trans = -rot * tVec;
 
-    ROS_INFO_STREAM("Calibration result");
-    ROS_INFO_STREAM(to_string(trans.at<double>(0)) + ", " + to_string(trans.at<double>(1)) + ", "
-                    + to_string(trans.at<double>(2)));
 
 
     Eigen::Matrix3d mat;
@@ -367,8 +378,25 @@ void Calibrate()
 
     Eigen::Quaternion<double> quat(mat);
 
-    ROS_INFO_STREAM(to_string(quat.x()) + ", " + to_string(quat.y()) + ", " + to_string(quat.z()) + ", "
-                    + to_string(quat.w()));
+    geometry_msgs::Pose calibPose;
+    calibPose.position.x = trans.at<double>(0);
+    calibPose.position.y = trans.at<double>(1);
+    calibPose.position.z = trans.at<double>(2);
+
+    calibPose.orientation.x = quat.x();
+    calibPose.orientation.y = quat.y();
+    calibPose.orientation.z = quat.z();
+    calibPose.orientation.w = quat.w();
+
+    _transformHandler->SendTransform(calibPose, "base_link", "depthcam1_link");
+
+    ROS_INFO_STREAM("Calibration result");
+    ROS_INFO_STREAM(to_string(calibPose.position.x) + ", " + to_string(calibPose.position.y) + ", "
+                    + to_string(calibPose.position.z));
+    ROS_INFO_STREAM(to_string(calibPose.orientation.x) + ", " + to_string(calibPose.orientation.y) + ", "
+                    + to_string(calibPose.orientation.z) + ", " + to_string(calibPose.orientation.w));
+
+
 }
 
 cv::Point3d lastValidPoint(0.0, 0.0, 0.0);
@@ -390,7 +418,9 @@ void CheckCalibrationTargets()
         {
             if(newCodes[i].id == id)
             {
-                Point3d point(newCodes[i].points3D[0][0], newCodes[i].points3D[0][1], newCodes[i].points3D[0][2]);
+                Point3d point(Point3d(newCodes[i].calib_target.transform.translation.x,
+                                      newCodes[i].calib_target.transform.translation.y,
+                                      newCodes[i].calib_target.transform.translation.z));
 
                 if(CheckDistance(lastValidPoint, point))
                 {
@@ -544,6 +574,7 @@ int main(int argc, char **argv)
 
     //launch transformation manager
     _transformManager = new TransformationManager(node, parameterHandler);
+    _transformHandler = new helper::TransformationHandler(node);
 
     ros::Rate rate(paramRefreshRate.GetValue());
 

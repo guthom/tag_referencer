@@ -1,10 +1,11 @@
-#ifndef IMAGEDATA_H
-#define IMAGEDATA_H
+#ifndef QRCODEDATA_H
+#define QRCODEDATA_H
 
 #include <ros/ros.h>
 #include <string.h>
 #include <vector>
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/TransformStamped.h>
 #include <Eigen/Geometry>
 
 
@@ -31,7 +32,8 @@ public:
     float refSize = 0.0f;
     geometry_msgs::Pose framePose;
     geometry_msgs::Pose qrPose;
+    geometry_msgs::TransformStamped calib_target;
 
 };
 
-#endif // IMAGEDATA_H
+#endif // QRCODEDATA_H

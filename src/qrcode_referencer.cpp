@@ -45,6 +45,7 @@ ros::ServiceServer srvGetQRPose;
 customparameter::ParameterHandler* parameterHandler;
 customparameter::Parameter<int> paramRefreshRate;
 customparameter::Parameter<int> paramReferenceCorner;
+customparameter::Parameter<std::string> paramTagPrefix;
 customparameter::Parameter<bool> paramServiceMode;
 customparameter::Parameter<bool> paramPublishMarkedImage;
 customparameter::Parameter<bool> paramPublishMarkedPointCloud;
