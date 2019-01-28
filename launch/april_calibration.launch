@@ -5,7 +5,7 @@
   <arg name="fps" default="30"/> 
   
   <!--Publish static transform to calibration target-->
-  <node pkg="tf2_ros" type="static_transform_publisher" name="calib_traget_link" args="0.095 0.0 0.0 0.0 0.0 0.0 1.0 /ee_link /calib_target"/>
+  <node pkg="tf2_ros" type="static_transform_publisher" name="calib_traget_link" args="0.076 0.0 0.0 0.0 0.0 0.0 1.0 /ee_link /calib_target"/>
    
   <group ns="depthcam1">
   <arg name="cameraName" value="depthcam1"/>

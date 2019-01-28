@@ -150,9 +150,9 @@ void InitParams()
     std::string subNamespace = "";
     //Standard params
     paramRefreshRate = parameterHandler->AddParameter("RefreshRate", "", (int)10);
-    paramReferenceCorner = parameterHandler->AddParameter("ReferenceCorner", "", (int)0);
-    paramCalibCount = parameterHandler->AddParameter("CalibCount", "", (int)100);
-    paramCalibTagID = parameterHandler->AddParameter("CalibTargetID", "", 0);
+    paramReferenceCorner = parameterHandler->AddParameter("ReferenceCorner", "", (int)4);
+    paramCalibCount = parameterHandler->AddParameter("CalibCount", "", (int)60);
+    paramCalibTagID = parameterHandler->AddParameter("CalibTargetID", "", 204);
     std::string defaultValue = "calib_target";
     paramCalibTargetTfName = parameterHandler->AddParameter("CalibTargetTfName", "", defaultValue);
     paramMinPointDistance = parameterHandler->AddParameter("MinPointDistance", "", 0.01f);
@@ -230,8 +230,8 @@ void MarkImage()
 void ScanCurrentImg()
 {
     //get calib_target information
-    geometry_msgs::TransformStamped calibTransform =  _transformHandler->GetTransform("base_link",
-                                                                                 paramCalibTargetTfName.GetValue());
+    geometry_msgs::TransformStamped calibTransform =  _transformHandler->GetTransform(paramCalibTargetTfName.GetValue(),
+                                                                                      "base_link");
 
     cv::Mat currentImage = GetCvImage();
     if(!currentImage.empty()) {
@@ -307,6 +307,9 @@ bool CheckDistance(cv::Point3d point1, cv::Point3d point2)
         return false;
 }
 
+Mat lastRVec;
+Mat lastTVec;
+int calibRuns = 0;
 void Calibrate()
 {
     using namespace cv;
@@ -356,7 +359,18 @@ void Calibrate()
     Mat rVec;
     Mat tVec;
 
-    solvePnP(modelPoints, imagePoints, intMat, Mat::zeros(4, 1, CV_64FC1), rVec, tVec, false, CV_EPNP);
+    if (calibRuns == 0)
+        solvePnP(modelPoints, imagePoints, intMat, Mat::zeros(4, 1, CV_64FC1), rVec, tVec, false, CV_EPNP);
+    else
+    {
+        rVec = lastRVec;
+        tVec = lastTVec;
+        solvePnP(modelPoints, imagePoints, intMat, Mat::zeros(4, 1, CV_64FC1), rVec, tVec, true, CV_EPNP);
+    }
+
+    lastRVec = rVec;
+    lastTVec = tVec;
+    calibRuns += 1;
 
     ROS_INFO_STREAM(to_string(tVec.at<double>(0)) + ", " + to_string(tVec.at<double>(1)) + ", "
                     + to_string(tVec.at<double>(2)));
