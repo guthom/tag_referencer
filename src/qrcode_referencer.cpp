@@ -13,6 +13,8 @@
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <opencv2/opencv.hpp>
+#include <opencv2/core/eigen.hpp>
 #include <cv_bridge/cv_bridge.h>
 
 #include <custom_parameter/parameterHandler.h>
@@ -27,9 +29,10 @@
 #include "scanning/AprilTagScanner.h"
 #include "transformations/PoseDerivator.h"
 #include "transformations/TransformationManager.h"
+#include "helper/TransformationHandler.h"
 
 //common stuff
-std::string nodeName = "qrcode_referencer";
+std::string nodeName = "april_calibrator";
 
 //ros sutff
 ros::NodeHandle* node;
@@ -45,13 +48,17 @@ ros::ServiceServer srvGetQRPose;
 customparameter::ParameterHandler* parameterHandler;
 customparameter::Parameter<int> paramRefreshRate;
 customparameter::Parameter<int> paramReferenceCorner;
-customparameter::Parameter<std::string> paramTagPrefix;
+customparameter::Parameter<int> paramCalibCount;
+customparameter::Parameter<int> paramCalibTagID;
+customparameter::Parameter<std::string> paramCalibTargetTfName;
+customparameter::Parameter<std::string> paramCameraName;
 customparameter::Parameter<bool> paramServiceMode;
 customparameter::Parameter<bool> paramPublishMarkedImage;
 customparameter::Parameter<bool> paramPublishMarkedPointCloud;
 customparameter::Parameter<bool> paramSimulationMode;
 customparameter::Parameter<bool> paramAprilTagMode;
 customparameter::Parameter<bool> paramQRCodeMode;
+customparameter::Parameter<float> paramMinPointDistance;
 
 //scanning stuff
 std::vector<ScannerBase*> _scanner;
@@ -59,9 +66,12 @@ PoseDerivator _poseDerivator;
 
 //Transformation manager
 TransformationManager* _transformManager;
+helper::TransformationHandler* _transformHandler;
 
 //qrCode data
 static boost::mutex _dataMutex;
+std::vector<QRCodeData> _calibTargets;
+
 std::vector<QRCodeData> _qrCodesData;
 void SetQrCodesData(std::vector<QRCodeData> data)
 {
@@ -140,8 +150,15 @@ void InitParams()
     parameterHandler = new customparameter::ParameterHandler(node);
     std::string subNamespace = "";
     //Standard params
-    paramRefreshRate = parameterHandler->AddParameter("RefreshRate", "", (int)30);
-    paramReferenceCorner = parameterHandler->AddParameter("ReferenceCorner", "", (int)0);
+    paramRefreshRate = parameterHandler->AddParameter("RefreshRate", "", (int)10);
+    paramReferenceCorner = parameterHandler->AddParameter("ReferenceCorner", "", (int)4);
+    paramCalibCount = parameterHandler->AddParameter("CalibCount", "", (int)60);
+    paramCalibTagID = parameterHandler->AddParameter("CalibTargetID", "", 204);
+    std::string defaultValue = "calib_target";
+    paramCalibTargetTfName = parameterHandler->AddParameter("CalibTargetTfName", "", defaultValue);
+    defaultValue = "depthcam";
+    paramCameraName = parameterHandler->AddParameter("CameraName", "", defaultValue);
+    paramMinPointDistance = parameterHandler->AddParameter("MinPointDistance", "", 0.01f);
     paramServiceMode = parameterHandler->AddParameter("ServiceMode", "", false);
     paramPublishMarkedPointCloud = parameterHandler->AddParameter("PublishMarkedPointCloud", "", false);
     paramPublishMarkedImage = parameterHandler->AddParameter("PublishMarkedImage", "", true);
@@ -198,7 +215,7 @@ void PublishDebugPose(std::vector<QRCodeData> qrCodes)
         }
         */
     }
-        pubDebugPose.publish(msg);
+    pubDebugPose.publish(msg);
 }
 
 void MarkImage()
@@ -215,6 +232,10 @@ void MarkImage()
 
 void ScanCurrentImg()
 {
+    //get calib_target information
+    geometry_msgs::TransformStamped calibTransform =  _transformHandler->GetTransform(paramCalibTargetTfName.GetValue(),
+                                                                                      "base_link");
+
     cv::Mat currentImage = GetCvImage();
     if(!currentImage.empty()) {
         std::vector<QRCodeData> qrCodeData;
@@ -232,6 +253,11 @@ void ScanCurrentImg()
 
             if (newQRCodeData.size() > 0)
             {
+                for(int j = 0; j < newQRCodeData.size(); j++)
+                {
+                    newQRCodeData[j].calib_target = calibTransform;
+                }
+
                 qrCodeData.reserve(qrCodeData.size() + newQRCodeData.size());
                 qrCodeData.insert(std::end(qrCodeData), std::begin(newQRCodeData), std::end(newQRCodeData));
             }
@@ -255,6 +281,181 @@ void MarkPointCloud()
     //TODO: Implement this method
 }
 
+void PrintMatrix(MatrixXd mat)
+{
+    Eigen::IOFormat format;
+    if (mat.cols() > 1)
+        format = Eigen::IOFormat(StreamPrecision, 0, ", ", ";\n", "", "", "[\n ", "]");
+    else
+        format = Eigen::IOFormat(StreamPrecision, 0, ", ", ";  ", "", "", "[", "]");
+
+    ROS_INFO_STREAM(mat.format(format));
+}
+
+
+void PrintMatrix(cv::Mat mat)
+{
+    ROS_INFO_STREAM(mat.rowRange(0, 3));
+}
+
+bool CheckDistance(cv::Point3d point1, cv::Point3d point2)
+{
+    float minDistance = paramMinPointDistance.GetValue();
+
+    double res = cv::norm(point1-point2);
+
+    if (res >= minDistance)
+        return true;
+    else
+        return false;
+}
+
+Mat lastRVec;
+Mat lastTVec;
+int calibRuns = 0;
+void Calibrate()
+{
+    using namespace cv;
+    using namespace std;
+
+    // 2D/3D points
+    vector<Point2d> imagePoints;
+    vector<Point3d> modelPoints;
+    int refernceCorner = paramReferenceCorner.GetValue();
+
+    for(int i = 0; i < _calibTargets.size(); i++)
+    {
+        auto target = _calibTargets[i];
+
+        imagePoints.push_back(Point2d(double(target.points[refernceCorner][0]),
+                                      double(target.points[refernceCorner][1])));
+
+        //ROS_INFO_STREAM(to_string(imagePoints[imagePoints.size()-1].x) + ", " +
+        //                        to_string(imagePoints[imagePoints.size()-1].y));
+
+
+        modelPoints.push_back(Point3d(target.calib_target.transform.translation.x,
+                                      target.calib_target.transform.translation.y,
+                                      target.calib_target.transform.translation.z));
+
+        //ROS_INFO_STREAM(to_string(modelPoints[modelPoints.size()-1].x) + ", " +
+        //                to_string(modelPoints[modelPoints.size()-1].y)+ ", " +
+        //                to_string(modelPoints[modelPoints.size()-1].z));
+
+    }
+
+    if(imagePoints.size() != modelPoints.size())
+    {
+        ROS_INFO_STREAM("Can't run calibration! model and image point size is not equal!");
+        return;
+    }
+
+
+    ROS_INFO_STREAM("Run calibration with " + to_string(imagePoints.size()) + " correspondences!");
+
+    Mat intMat(3, 3, CV_64FC1, (void *) _currentCameraInfo.K.data());
+    Mat distCoeffs(4, 1, CV_64FC1, (void *) _currentCameraInfo.D.data());
+
+    PrintMatrix(intMat);
+    PrintMatrix(distCoeffs);
+
+    Mat rVec;
+    Mat tVec;
+
+    if (calibRuns == 0)
+        solvePnP(modelPoints, imagePoints, intMat, Mat::zeros(4, 1, CV_64FC1), rVec, tVec, false, CV_EPNP);
+    else
+    {
+        rVec = lastRVec;
+        tVec = lastTVec;
+        solvePnP(modelPoints, imagePoints, intMat, Mat::zeros(4, 1, CV_64FC1), rVec, tVec, true, CV_EPNP);
+    }
+
+    lastRVec = rVec;
+    lastTVec = tVec;
+    calibRuns += 1;
+
+    ROS_INFO_STREAM(to_string(tVec.at<double>(0)) + ", " + to_string(tVec.at<double>(1)) + ", "
+                    + to_string(tVec.at<double>(2)));
+
+    //now we need the inverse matrix of the calculated transformation
+    Mat rot, trans, jac;
+    Rodrigues(rVec, rot, jac);
+
+    //inverse of rotation = transpose!
+    rot = rot.t();
+
+    //inverse of translation
+    trans = -rot * tVec;
+
+
+
+    Eigen::Matrix3d mat;
+    cv2eigen(rot, mat);
+
+    Eigen::Quaternion<double> quat(mat);
+
+    geometry_msgs::Pose calibPose;
+    calibPose.position.x = trans.at<double>(0);
+    calibPose.position.y = trans.at<double>(1);
+    calibPose.position.z = trans.at<double>(2);
+
+    calibPose.orientation.x = quat.x();
+    calibPose.orientation.y = quat.y();
+    calibPose.orientation.z = quat.z();
+    calibPose.orientation.w = quat.w();
+
+    _transformHandler->SendTransform(calibPose, "base_link", paramCameraName.GetValue() + "_link");
+
+    ROS_INFO_STREAM("Calibration result");
+    ROS_INFO_STREAM(to_string(calibPose.position.x) + ", " + to_string(calibPose.position.y) + ", "
+                    + to_string(calibPose.position.z));
+    ROS_INFO_STREAM(to_string(calibPose.orientation.x) + ", " + to_string(calibPose.orientation.y) + ", "
+                    + to_string(calibPose.orientation.z) + ", " + to_string(calibPose.orientation.w));
+
+
+}
+
+cv::Point3d lastValidPoint(0.0, 0.0, 0.0);
+void CheckCalibrationTargets()
+{
+    auto newCodes = GetQrCodesData();
+    unsigned long collectionSize = _calibTargets.size();
+    if(collectionSize >= paramCalibCount.GetValue())
+    {
+        Calibrate();
+        _calibTargets.clear();
+
+        ROS_INFO_STREAM("Reset calibration collection!");
+    }
+    else if(newCodes.size() > 0)
+    {
+        int id = paramCalibTagID.GetValue();
+        for(int i = 0; i < newCodes.size(); i++ )
+        {
+            if(newCodes[i].id == id)
+            {
+                Point3d point(Point3d(newCodes[i].calib_target.transform.translation.x,
+                                      newCodes[i].calib_target.transform.translation.y,
+                                      newCodes[i].calib_target.transform.translation.z));
+
+                if(CheckDistance(lastValidPoint, point))
+                {
+                    lastValidPoint = point;
+                    _calibTargets.push_back(newCodes[i]);
+                    ROS_INFO_STREAM("Add new calib target to calibration collection, Count:" +
+                                    std::to_string(collectionSize));
+                }
+                else
+                {
+                    ROS_INFO_STREAM("Rejected point because its to close to the last one!");
+                }
+            }
+        }
+
+    }
+}
+
 void FuseInformation()
 {
     auto qrCodesData = GetQrCodesData();
@@ -268,6 +469,7 @@ void FuseInformation()
     qrCodesData = _poseDerivator.CalculateQRPose(qrCodesData, pclCloud, paramReferenceCorner.GetValue());
     //send derived Transforms to transformation manager
     _transformManager->AddQrCodesData(qrCodesData);
+    SetQrCodesData(qrCodesData);
 
     //publish MarkedPointCloud
     //TODO: Use MarkPointCloud instead
@@ -389,6 +591,7 @@ int main(int argc, char **argv)
 
     //launch transformation manager
     _transformManager = new TransformationManager(node, parameterHandler);
+    _transformHandler = new helper::TransformationHandler(node);
 
     ros::Rate rate(paramRefreshRate.GetValue());
 
@@ -421,6 +624,8 @@ int main(int argc, char **argv)
             ROS_WARN_STREAM("QRCodeReferencer will Publish simulated QRCode pose!");
             processingFunctions.push_back(PublishSimulatedQR);
         }
+
+        processingFunctions.push_back(CheckCalibrationTargets);
 
         ROS_INFO_STREAM("Starting " + nodeName + " node");
 
