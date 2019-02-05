@@ -1,6 +1,6 @@
 april_calibrator:
   {
-  CalibCount: 70,
+  CalibCount: 20,
   CalibTargetID: 204, 
   CaliTargetTfName: "calib_target",
 ApriTagScanner: 

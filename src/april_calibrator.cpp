@@ -68,6 +68,8 @@ PoseDerivator _poseDerivator;
 TransformationManager* _transformManager;
 helper::TransformationHandler* _transformHandler;
 
+geometry_msgs::Pose _lastCalibPose;
+
 //qrCode data
 static boost::mutex _dataMutex;
 std::vector<QRCodeData> _calibTargets;
@@ -313,6 +315,7 @@ bool CheckDistance(cv::Point3d point1, cv::Point3d point2)
 Mat lastRVec;
 Mat lastTVec;
 int calibRuns = 0;
+bool calibrated = false;
 void Calibrate()
 {
     using namespace cv;
@@ -396,16 +399,19 @@ void Calibrate()
     Eigen::Quaternion<double> quat(mat);
 
     geometry_msgs::Pose calibPose;
-    calibPose.position.x = trans.at<double>(0);
-    calibPose.position.y = trans.at<double>(1);
-    calibPose.position.z = trans.at<double>(2);
+    _lastCalibPose.position.x = trans.at<double>(0);
+    _lastCalibPose.position.y = trans.at<double>(1);
+    _lastCalibPose.position.z = trans.at<double>(2);
 
-    calibPose.orientation.x = quat.x();
-    calibPose.orientation.y = quat.y();
-    calibPose.orientation.z = quat.z();
-    calibPose.orientation.w = quat.w();
+    _lastCalibPose.orientation.x = quat.x();
+    _lastCalibPose.orientation.y = quat.y();
+    _lastCalibPose.orientation.z = quat.z();
+    _lastCalibPose.orientation.w = quat.w();
 
-    _transformHandler->SendTransform(calibPose, "base_link", paramCameraName.GetValue() + "_link");
+    _transformHandler->SendStaticTransform(calibPose, "base_link", paramCameraName.GetValue() + "_link");
+    _transformHandler->WaitOne();
+
+    calibrated = true;
 
     ROS_INFO_STREAM("Calibration result");
     ROS_INFO_STREAM(to_string(calibPose.position.x) + ", " + to_string(calibPose.position.y) + ", "
@@ -414,6 +420,11 @@ void Calibrate()
                     + to_string(calibPose.orientation.z) + ", " + to_string(calibPose.orientation.w));
 
 
+}
+
+void SendCalibration()
+{
+    _transformHandler->SendTransform(_lastCalibPose, "base_link", paramCameraName.GetValue() + "_link");
 }
 
 cv::Point3d lastValidPoint(0.0, 0.0, 0.0);
@@ -503,6 +514,8 @@ void Init()
     {
         _scanner.push_back(new AprilTagScanner(parameterHandler));
     };
+
+    _lastCalibPose.orientation.w = 1.0;
 
 }
 
@@ -626,6 +639,7 @@ int main(int argc, char **argv)
         }
 
         processingFunctions.push_back(CheckCalibrationTargets);
+        processingFunctions.push_back(SendCalibration);
 
         ROS_INFO_STREAM("Starting " + nodeName + " node");
 
@@ -634,10 +648,17 @@ int main(int argc, char **argv)
             ros::spinOnce();
 
             //continuously scann image
-            for(int i = 0; i < processingFunctions.size(); i++)
+
+            if(!calibrated)
             {
-                //execute added functions
-                (*processingFunctions[i])();
+                for(int i = 0; i < processingFunctions.size(); i++)
+                {
+                    //execute added functions
+                    (*processingFunctions[i])();
+                }
+            } else
+            {
+                SendCalibration();
             }
 
             rate.sleep();
