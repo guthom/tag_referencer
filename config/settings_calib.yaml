@@ -1,7 +1,7 @@
 april_calibrator:
   {
-  CalibCount: 10,
-  CalibTargetID: 0, 
+  CalibCount: 70,
+  CalibTargetID: 204, 
   CaliTargetTfName: "calib_target",
 ApriTagScanner: 
   {
@@ -31,6 +31,6 @@ SimulationMode: false,
 transformation_manager: 
   {
     RefreshRate: 30,
-    PoseErrorFactor: 0.1
+    PoseErrorFactor: 0.0
   },
 }

@@ -2,9 +2,12 @@
   <arg name="rate" default="1.0" />
   <arg name="loop" default="false"/>
 	
+  <!--Publish static transform to calibration target-->
+
+
   <!--Filenames for the different bags-->
-  <arg name="path" default="/home/$(env USER)/ROS/BagFiles/" />
-  <arg name="filename" default="zed_qrcode.bag"/>	
+  <arg name="path" default="/home/thomas/ROS/BagFiles/qrCodeReferencer/" />
+  <arg name="filename" default="new.bag"/>	
     
   <group if="$(arg loop)">	
     <node pkg="rosbag" type="play" name="player" 
@@ -17,5 +20,14 @@
 		  args="$(arg path)$(arg filename) --clock --rate=$(arg rate)"
 		  output="screen"/>
   </group>
-	
+
+  <node pkg="tf2_ros" type="static_transform_publisher" name="map_tf" args="0 0 0 0 0 0 1 /world /map"/>    
+  <node pkg="tf2_ros" type="static_transform_publisher" name="bl_tf" args="0 0 0 0 0 0 1 /map /base_link"/>    
+  <node pkg="tf2_ros" type="static_transform_publisher" name="calib_traget_link1" args="-0.076 0.0 0.0 0.0 0.0 0.0 1.0 /wrist_3_link /calib_target"/>
+  <node pkg="tf2_ros" type="static_transform_publisher" name="calib_traget_link2" args="-0.076 0.0 0.0 0.0 0.0 0.0 1.0 /wrist_3_link /calib_target"/>
+  <node pkg="tf2_ros" type="static_transform_publisher" name="calib_traget_link3" args="-0.076 0.0 0.0 0.0 0.0 0.0 1.0 /wrist_3_link /calib_target"/>
+  
+	    <arg name="rviz_cfg" default="$(find kollrobot_controller)/rvizcfg/kollrobot_controller_sole.rviz" />
+    <node name="rviz_thomas" pkg="rviz" type="rviz" args="-d $(arg rviz_cfg)">
+  </node>	
 </launch>
