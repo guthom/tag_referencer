@@ -40,6 +40,7 @@ ros::Subscriber subCameraInfo;
 ros::Subscriber subImageMessage;
 ros::Subscriber subDepthImageMessage;
 ros::Publisher pubScannedImage;
+ros::Publisher pubReporjectedImage;
 ros::Publisher pubMarkedPointCloud;
 ros::Publisher pubDebugPose;
 ros::ServiceServer srvGetQRPose;
@@ -69,6 +70,14 @@ TransformationManager* _transformManager;
 helper::TransformationHandler* _transformHandler;
 
 geometry_msgs::Pose _lastCalibPose;
+
+std::vector<std::string> linkNames = {"base_link",
+                                      "shoulder_link",
+                                      "upper_arm_link",
+                                      "forearm_link",
+                                      "wrist_1_link",
+                                      "wrist_2_link",
+                                      "wrist_3_link"};
 
 //qrCode data
 static boost::mutex _dataMutex;
@@ -422,9 +431,51 @@ void Calibrate()
 
 }
 
+std::vector<Point3f> GetPose()
+{
+    std::vector<Point3f> ret;
+    for (std::string link:linkNames)
+    {
+        geometry_msgs::Transform transform = _transformHandler->GetTransform("world", link).transform;
+        Point3f point(float(transform.translation.x), float(transform.translation.y), float(transform.translation.z));
+        ret.push_back(point);
+    }
+
+    return ret;
+}
+
+void DrawPose(Mat image, std::vector<Point> points)
+{
+    for (cv::Point p:points)
+    {
+        cv::circle(image, p, 5, cv::Scalar(0, 0, 255), 1, cv::LINE_8, 0);
+    }
+
+}
+
+void PublishReprojection()
+{
+    using namespace cv_bridge;
+    std_msgs::Header header;
+    header.stamp = ros::Time::now();
+    CvImage imageBridge = CvImage(header, sensor_msgs::image_encodings::RGB8, GetCvImage());
+    Mat intMat(3, 3, CV_64FC1, (void *) _currentCameraInfo.K.data());
+    Mat distCoeffs(4, 1, CV_64FC1, (void *) _currentCameraInfo.D.data());
+    std::vector<Point> points;
+    projectPoints(GetPose(), lastRVec, lastTVec, intMat, distCoeffs, points);
+    DrawPose(imageBridge.image, points);
+
+    sensor_msgs::Image imgMsg;
+    imageBridge.toImageMsg(imgMsg);
+    pubReporjectedImage.publish(imgMsg);
+
+}
+
+
 void SendCalibration()
 {
     _transformHandler->SendTransform(_lastCalibPose, "base_link", paramCameraName.GetValue() + "_link");
+    PublishReprojection();
 }
 
 cv::Point3d lastValidPoint(0.0, 0.0, 0.0);
@@ -599,7 +650,8 @@ int main(int argc, char **argv)
     ROS_INFO_STREAM("Will publish ScannedImages to " << pubScannedImage.getTopic());
     pubMarkedPointCloud = node->advertise<sensor_msgs::PointCloud2>("MarkedPointCloud", 100);
     ROS_INFO_STREAM("Will publish marked Pointclouds to " << pubMarkedPointCloud.getTopic());
-
+    pubReporjectedImage =  node->advertise<sensor_msgs::Image>("ReprojectedPose", 100);
+    ROS_INFO_STREAM("Will publish reprojected Points to " << pubReporjectedImage.getTopic());
     pubDebugPose = node->advertise<geometry_msgs::PoseArray>("DebugPose", 100);
 
     //launch transformation manager
