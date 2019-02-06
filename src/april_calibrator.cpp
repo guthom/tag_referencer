@@ -163,7 +163,7 @@ void InitParams()
     //Standard params
     paramRefreshRate = parameterHandler->AddParameter("RefreshRate", "", (int)10);
     paramReferenceCorner = parameterHandler->AddParameter("ReferenceCorner", "", (int)4);
-    paramCalibCount = parameterHandler->AddParameter("CalibCount", "", (int)60);
+    paramCalibCount = parameterHandler->AddParameter("CalibCount", "", (int)5);
     paramCalibTagID = parameterHandler->AddParameter("CalibTargetID", "", 204);
     std::string defaultValue = "calib_target";
     paramCalibTargetTfName = parameterHandler->AddParameter("CalibTargetTfName", "", defaultValue);
@@ -431,24 +431,24 @@ void Calibrate()
 
 }
 
-std::vector<Point3f> GetPose()
+std::vector<Point3d> GetPose()
 {
-    std::vector<Point3f> ret;
+    std::vector<Point3d> ret;
     for (std::string link:linkNames)
     {
-        geometry_msgs::Transform transform = _transformHandler->GetTransform("world", link).transform;
-        Point3f point(float(transform.translation.x), float(transform.translation.y), float(transform.translation.z));
+        geometry_msgs::Transform transform = _transformHandler->GetTransform(link, "base_link").transform;
+        Point3d point(transform.translation.x, transform.translation.y, transform.translation.z);
         ret.push_back(point);
     }
 
     return ret;
 }
 
-void DrawPose(Mat image, std::vector<Point> points)
+void DrawPose(Mat image, std::vector<Point2d> points)
 {
     for (cv::Point p:points)
     {
-        cv::circle(image, p, 5, cv::Scalar(0, 0, 255), 1, cv::LINE_8, 0);
+        cv::circle(image, p, 5, cv::Scalar(255, 0, 0), -1, cv::LINE_8, 0);
     }
 
 }
@@ -461,8 +461,10 @@ void PublishReprojection()
     CvImage imageBridge = CvImage(header, sensor_msgs::image_encodings::RGB8, GetCvImage());
     Mat intMat(3, 3, CV_64FC1, (void *) _currentCameraInfo.K.data());
     Mat distCoeffs(4, 1, CV_64FC1, (void *) _currentCameraInfo.D.data());
-    std::vector<Point> points;
-    projectPoints(GetPose(), lastRVec, lastTVec, intMat, distCoeffs, points);
+    std::vector<Point2d> points;
+    std::vector<Point3d> originPoints = GetPose();
+
+    projectPoints(originPoints, lastRVec, lastTVec, intMat, distCoeffs, points);
     DrawPose(imageBridge.image, points);
 
     sensor_msgs::Image imgMsg;
@@ -691,7 +693,6 @@ int main(int argc, char **argv)
         }
 
         processingFunctions.push_back(CheckCalibrationTargets);
-        processingFunctions.push_back(SendCalibration);
 
         ROS_INFO_STREAM("Starting " + nodeName + " node");
 
