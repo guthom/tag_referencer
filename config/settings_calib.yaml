@@ -1,7 +1,11 @@
 april_calibrator:
   {
-  CalibCount: 20,
-  CalibTargetID: 204, 
+  baseFrame: world,
+  cameraBaseTopic: /depthcam1/depthcam1/,
+referenceBaseName: aprilTag_,
+
+  CalibCount: 30,
+  CalibTargetID: 316, 
   CaliTargetTfName: "calib_target",
 ApriTagScanner: 
   {

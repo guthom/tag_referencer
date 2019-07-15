@@ -1,8 +1,11 @@
 qrcode_referencer:
   {
+baseFrame: world,
+cameraBaseTopic: /depthcam1/depthcam1/,
 
 ApriTagScanner: 
   {
+  TagPrefix: aprilTag_,
   ReferenceSize: 0.0, 
   RefineDecode: false, 
   RefineEdges: true, 
@@ -13,6 +16,7 @@ ApriTagScanner:
   TagFamily: tag36h11, 
   TagThreads: 2
   },
+
 AprilTagMode: true,
 PublishMarkedImage: true,
 PublishMarkedPointCloud: false,
@@ -29,6 +33,6 @@ SimulationMode: false,
 transformation_manager: 
   {
     RefreshRate: 30,
-    PoseErrorFactor: 0.1
+    PoseErrorFactor: 0.0
   },
 }

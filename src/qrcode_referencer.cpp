@@ -32,7 +32,7 @@
 #include "helper/TransformationHandler.h"
 
 //common stuff
-std::string nodeName = "april_calibrator";
+std::string nodeName = "qrcode_referencer";
 
 //ros sutff
 ros::NodeHandle* node;
@@ -52,6 +52,8 @@ customparameter::Parameter<int> paramCalibCount;
 customparameter::Parameter<int> paramCalibTagID;
 customparameter::Parameter<std::string> paramCalibTargetTfName;
 customparameter::Parameter<std::string> paramCameraName;
+customparameter::Parameter<std::string> paramBaseFrameName;
+customparameter::Parameter<std::string> paramCameraBaseTopic;
 customparameter::Parameter<bool> paramServiceMode;
 customparameter::Parameter<bool> paramPublishMarkedImage;
 customparameter::Parameter<bool> paramPublishMarkedPointCloud;
@@ -156,6 +158,10 @@ void InitParams()
     paramCalibTagID = parameterHandler->AddParameter("CalibTargetID", "", 204);
     std::string defaultValue = "calib_target";
     paramCalibTargetTfName = parameterHandler->AddParameter("CalibTargetTfName", "", defaultValue);
+    defaultValue = "/depthcam1/depthcam1/";
+    paramCameraBaseTopic = parameterHandler->AddParameter("CameraBaseTopic", "", defaultValue);
+    defaultValue = "aprilTag_";
+    paramBaseFrameName = parameterHandler->AddParameter("BaseframeName", "", defaultValue);
     defaultValue = "depthcam";
     paramCameraName = parameterHandler->AddParameter("CameraName", "", defaultValue);
     paramMinPointDistance = parameterHandler->AddParameter("MinPointDistance", "", 0.01f);
@@ -232,10 +238,6 @@ void MarkImage()
 
 void ScanCurrentImg()
 {
-    //get calib_target information
-    geometry_msgs::TransformStamped calibTransform =  _transformHandler->GetTransform(paramCalibTargetTfName.GetValue(),
-                                                                                      "base_link");
-
     cv::Mat currentImage = GetCvImage();
     if(!currentImage.empty()) {
         std::vector<QRCodeData> qrCodeData;
@@ -253,11 +255,6 @@ void ScanCurrentImg()
 
             if (newQRCodeData.size() > 0)
             {
-                for(int j = 0; j < newQRCodeData.size(); j++)
-                {
-                    newQRCodeData[j].calib_target = calibTransform;
-                }
-
                 qrCodeData.reserve(qrCodeData.size() + newQRCodeData.size());
                 qrCodeData.insert(std::end(qrCodeData), std::begin(newQRCodeData), std::end(newQRCodeData));
             }
@@ -416,11 +413,12 @@ int main(int argc, char **argv)
     Init();
 
     //define subcriber
-    subCameraInfo = node->subscribe(node->resolveName("/depthcam/color/camera_info"), 1, cameraInfoCallback);
+    std::string baseTopic = paramCameraBaseTopic.GetValue();
+    subCameraInfo = node->subscribe(node->resolveName(baseTopic + "color/camera_info"), 1, cameraInfoCallback);
     ROS_INFO_STREAM("Listening to CameraInfo-Topic: " << subCameraInfo.getTopic());
-    subImageMessage = node->subscribe(node->resolveName("/depthcam/color/image_raw"), 1, imageCallback);
+    subImageMessage = node->subscribe(node->resolveName(baseTopic + "color/image_raw"), 1, imageCallback);
     ROS_INFO_STREAM("Listening to RGBImage-Topic: " << subImageMessage.getTopic());
-    subDepthImageMessage = node->subscribe(node->resolveName("/depthcam/depth_registered/points"), 1, depthCloudCallback);
+    subDepthImageMessage = node->subscribe(node->resolveName(baseTopic + "depth_registered/points"), 1, depthCloudCallback);
     ROS_INFO_STREAM("Listening to DepthImage-Topic: " << subDepthImageMessage.getTopic());
 
     //define publisher

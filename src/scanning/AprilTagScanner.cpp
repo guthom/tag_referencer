@@ -88,7 +88,7 @@ void AprilTagScanner::InitParams()
     paramRefinePose = _paramHandler->AddParameter(subNamespace + "RefinePose", "", false);
     paramTagDecimate = _paramHandler->AddParameter(subNamespace + "TagDecimate", "", (float)1.0f);
     paramTagSigma = _paramHandler->AddParameter(subNamespace + "TagBlur", "", (float)0.0f);
-    std::string defaultString = "boxApril_";
+    std::string defaultString = "aprilTag_";
     paramTagPrefix = _paramHandler->AddParameter("TagPrefix", "", defaultString);
 }
 
@@ -98,7 +98,7 @@ void AprilTagScanner::InitParams()
 std::vector<QRCodeData> AprilTagScanner::ScanCurrentImg(cv::Mat cvImage)
 {
     std::vector<QRCodeData> aprilTags;
-
+    std::string prefix = paramTagPrefix.GetValue();
     int res = 0;
     try
     {
@@ -127,7 +127,7 @@ std::vector<QRCodeData> AprilTagScanner::ScanCurrentImg(cv::Mat cvImage)
             zarray_get(rawDetections, i, &detection);
 
             data.id = detection->id;
-            data.frameName = "boxApril_" + std::to_string(data.id);
+            data.frameName = prefix + std::to_string(data.id);
 
             std::vector<Eigen::Vector2i> points;
 
