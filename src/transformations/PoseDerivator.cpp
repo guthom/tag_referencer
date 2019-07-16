@@ -23,23 +23,12 @@ geometry_msgs::Quaternion CalculateOrientation(std::vector<Eigen::Vector3f> poin
     using namespace Eigen;
     geometry_msgs::Quaternion ret;
 
-    //calculate unit vectors of new coordinate system
-    Vector3f xVec = points[3] - points[0];
-    xVec.normalize();
-    Vector3f yVec = points[1] - points[0];
-    yVec.normalize();
-    //Calculate Z Unit Vector by normalize cross product of other x/y vectors -> normal for x/y plane
-    Vector3f zVec = xVec.cross(yVec);
-    zVec.normalize();
+    Eigen::Quaternionf quat;
+    quat.setFromTwoVectors(points[0], points[1]);
 
+    Eigen::Quaternionf rotation(0.707f, 0.0f, 0.0f, -0.707f);
 
-    Eigen::Matrix3f mat;
-
-    mat <<  xVec[0],  yVec[0],  zVec[0],
-            xVec[1],  yVec[1],  zVec[1],
-            xVec[2],  yVec[2],  zVec[2];
-
-    Eigen::Quaternionf quat(mat);
+    quat *= rotation;
 
     ret.x = quat.x();
     ret.y = quat.y();
