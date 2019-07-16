@@ -22,6 +22,7 @@ void TransformationManager::InitParameter()
     std::string subNamespace = _nodeName + "/";
     _paramRefreshRate = _parameterHandler->AddParameter("RefreshRate", subNamespace, "", int(5));
     _paramPoseErrorFactor = _parameterHandler->AddParameter("PoseErrorFactor", subNamespace, "", 0.1f);
+    _paramPublishEdgePoses = _parameterHandler->AddParameter("PublishEdgePoses", subNamespace, "", true);
 }
 
 void TransformationManager::InitRosStuff()
@@ -64,11 +65,12 @@ void TransformationManager::PublishTransforms()
         //set transfromation information
         geometry_msgs::Pose pose = qrCodes[i].qrPose;
 
-        transform.transform.rotation = qrCodes[i].qrPose.orientation;
+        transform.transform.rotation = pose.orientation;
         transform.transform.translation.x = pose.position.x;
         transform.transform.translation.y = pose.position.y;
         transform.transform.translation.z = pose.position.z;
 
+        float errorFactor =  _paramPoseErrorFactor.GetValue();
 
         if (std::isnan(transform.transform.rotation.w) || transform.transform.rotation.w == 0.0 ||
                 std::isnan(transform.transform.translation.x))
@@ -77,7 +79,27 @@ void TransformationManager::PublishTransforms()
         }
         else
         {
-            _transformationHandler->SendStableTransform(transform, _paramPoseErrorFactor.GetValue());
+            _transformationHandler->SendStableTransform(transform, errorFactor);
+
+            if (_paramPublishEdgePoses.GetValue())
+            {
+                for (int j = 0; j < qrCodes[i].points3D.size()-1; j++)
+                {
+                    auto point = qrCodes[i].points3D[j];
+
+                    geometry_msgs::TransformStamped edgeTransform;
+                    header.frame_id = qrCodes[i].cameraFrameID;
+                    edgeTransform.header = header;
+                    edgeTransform.header.frame_id = qrCodes[i].cameraFrameID;
+                    edgeTransform.child_frame_id = qrCodes[i].frameName + "_" + std::to_string(j);
+                    edgeTransform.transform.translation.x = point(0);
+                    edgeTransform.transform.translation.y = point(1);
+                    edgeTransform.transform.translation.z = point(2);
+                    edgeTransform.transform.rotation = pose.orientation;
+                    _transformationHandler->SendStableTransform(edgeTransform, errorFactor);
+                }
+            }
+
         }
     }
 }

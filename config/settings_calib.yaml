@@ -2,7 +2,7 @@ april_calibrator:
   {
   baseFrame: world,
   cameraBaseTopic: /depthcam1/depthcam1/,
-referenceBaseName: aprilTag_,
+  referenceBaseName: aprilTag_,
 
   CalibCount: 30,
   CalibTargetID: 316, 
@@ -35,6 +35,7 @@ SimulationMode: false,
 transformation_manager: 
   {
     RefreshRate: 30,
-    PoseErrorFactor: 0.0
+    PoseErrorFactor: 0.0,
+    PublishEdgePoses: true
   },
 }

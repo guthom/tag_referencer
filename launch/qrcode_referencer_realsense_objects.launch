@@ -1,0 +1,57 @@
+<launch>  
+  <arg name="rviz_cfg" default="$(find qrcode_referencer)/rvizConfig/dev.rviz" />
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rviz_cfg)"/>	
+  
+  <!-- launch realsense-->
+  <arg name="width" default="1280"/>
+  <arg name="height" default="720"/>
+  <arg name="fps" default="30"/>
+  
+  <group ns="depthcam1">
+  <arg name="cameraName" value="depthcam1"/>
+  <node pkg="tf2_ros" type="static_transform_publisher" name="$(arg cameraName)_link" args="0 0 0 0 0 0 1.0 /world /$(arg cameraName)_link"/>    
+  <include file="$(find realsense2_camera)/launch/rs_rgbd.launch">
+      <arg name="camera"            value="$(arg cameraName)"/>
+      <arg name="serial_no"        value=""/>
+      <arg name="manager"             default="realsense2_camera_manager_$(arg cameraName)"/>
+      <!--arg name="json_file_path"      value=""/-->
+
+      <arg name="fisheye_width"       value="$(arg width)"/>
+      <arg name="fisheye_height"      value="$(arg height)"/>
+      <arg name="enable_fisheye"      value="true"/>
+
+      <arg name="depth_width"         value="$(arg width)"/>
+      <arg name="depth_height"        value="$(arg height)"/>
+      <arg name="enable_depth"        value="true"/>
+
+      <arg name="infra1_width"        value="$(arg width)"/>
+      <arg name="infra1_height"       value="$(arg height)"/>
+      <arg name="enable_infra1"       value="true"/>
+
+      <arg name="infra2_width"        value="$(arg width)"/>
+      <arg name="infra2_height"       value="$(arg height)"/>
+      <arg name="enable_infra2"       value="true"/>
+
+      <arg name="color_width"         value="$(arg width)"/>
+      <arg name="color_height"        value="$(arg height)"/>
+      <arg name="enable_color"        value="true"/>
+
+      <arg name="fisheye_fps"         value="$(arg fps)"/>
+      <arg name="depth_fps"           value="$(arg fps)"/>
+      <arg name="infra1_fps"          value="$(arg fps)"/>
+      <arg name="infra2_fps"          value="$(arg fps)"/>
+      <arg name="color_fps"           value="$(arg fps)"/>
+      <arg name="gyro_fps"            value="1000"/>
+      <arg name="accel_fps"           value="1000"/>
+      <arg name="enable_imu"          value="false"/>
+
+      <arg name="enable_pointcloud"   value="false"/>
+      <arg name="enable_sync"         value="true"/>
+      <arg name="align_depth"         value="true"/>
+    </include>
+  </group>
+
+  <rosparam command="load" file="$(find qrcode_referencer)/config/settings_objects.yaml" />
+  <node name="qrcode_referencer" pkg="qrcode_referencer" type="qrcode_referencer" output="screen">
+  </node>
+</launch>

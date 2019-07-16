@@ -1,5 +1,11 @@
+qrcode_referencer:
+  {
+baseFrame: world,
+cameraBaseTopic: /depthcam1/depthcam1/,
+
 ApriTagScanner: 
   {
+  TagPrefix: aprilTag_,
   ReferenceSize: 0.0, 
   RefineDecode: false, 
   RefineEdges: true, 
@@ -9,21 +15,25 @@ ApriTagScanner:
   TagDecimate: 1.0, 
   TagFamily: tag36h11, 
   TagThreads: 2
-  }
-AprilTagMode: true
-PublishMarkedImage: true
-PublishMarkedPointCloud: false
-QRCodeMode: true
+  },
+
+AprilTagMode: true,
+PublishMarkedImage: true,
+PublishMarkedPointCloud: false,
+QRCodeMode: false,
 QRCodeScanner:
    {
      ReferenceSize: 0.0
-    }
+    },
 
-ReferenceCorner: 1
-RefreshRate: 60
-ServiceMode: false
-SimulationMode: false
+ReferenceCorner: 4,
+RefreshRate: 30,
+ServiceMode: false,
+SimulationMode: false,
 transformation_manager: 
   {
-    RefreshRate: 5
-  }
+    RefreshRate: 30,
+    PoseErrorFactor: 0.0,
+    PublishEdgePoses: false
+  },
+}

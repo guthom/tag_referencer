@@ -31,6 +31,7 @@ private:
     //parameter stuff
     customparameter::ParameterHandler* _parameterHandler;
     customparameter::Parameter<int> _paramRefreshRate;
+    customparameter::Parameter<bool> _paramPublishEdgePoses;
     customparameter::Parameter<float> _paramPoseErrorFactor;
 
     void Init(ros::NodeHandle* parentNode);
