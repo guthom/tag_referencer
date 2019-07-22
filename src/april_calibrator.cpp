@@ -53,6 +53,7 @@ customparameter::Parameter<int> paramCalibCount;
 customparameter::Parameter<int> paramCalibTagID;
 customparameter::Parameter<std::string> paramCalibTargetTfName;
 customparameter::Parameter<std::string> paramCameraName;
+customparameter::Parameter<float> paramTagSize;
 customparameter::Parameter<bool> paramServiceMode;
 customparameter::Parameter<bool> paramPublishMarkedImage;
 customparameter::Parameter<bool> paramPublishMarkedPointCloud;
@@ -63,7 +64,7 @@ customparameter::Parameter<float> paramMinPointDistance;
 
 //scanning stuff
 std::vector<ScannerBase*> _scanner;
-PoseDerivator _poseDerivator;
+PoseDerivator* _poseDerivator;
 
 //Transformation manager
 TransformationManager* _transformManager;
@@ -530,7 +531,7 @@ void FuseInformation()
     pcl::PCLPointCloud2 pclCloud;
     pcl_conversions::moveToPCL(depthMsg, pclCloud);
 
-    qrCodesData = _poseDerivator.CalculateQRPose(qrCodesData, pclCloud, paramReferenceCorner.GetValue());
+    qrCodesData = _poseDerivator->CalculateQRPose(qrCodesData, pclCloud, paramReferenceCorner.GetValue());
     //send derived Transforms to transformation manager
     _transformManager->AddQrCodesData(qrCodesData);
     SetQrCodesData(qrCodesData);
@@ -638,6 +639,8 @@ int main(int argc, char **argv)
     node = new ros::NodeHandle(nodeName);
 
     Init();
+
+    _poseDerivator = new PoseDerivator(paramTagSize.GetValue());
 
     //define subcriber
     subCameraInfo = node->subscribe(node->resolveName("/depthcam/color/camera_info"), 1, cameraInfoCallback);
