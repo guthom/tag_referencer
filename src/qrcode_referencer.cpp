@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include <vector>
+#include <queue>
 #include <ros/subscriber.h>
 #include <qrcode_referencer/GetQRPose.h>
 #include <sensor_msgs/Image.h>
@@ -49,6 +50,7 @@ customparameter::ParameterHandler* parameterHandler;
 customparameter::Parameter<int> paramRefreshRate;
 customparameter::Parameter<int> paramReferenceCorner;
 customparameter::Parameter<int> paramCalibCount;
+customparameter::Parameter<float> paramTagSize;
 customparameter::Parameter<int> paramCalibTagID;
 customparameter::Parameter<std::string> paramCalibTargetTfName;
 customparameter::Parameter<std::string> paramCameraName;
@@ -64,7 +66,7 @@ customparameter::Parameter<float> paramMinPointDistance;
 
 //scanning stuff
 std::vector<ScannerBase*> _scanner;
-PoseDerivator _poseDerivator;
+PoseDerivator* _poseDerivator;
 
 //Transformation manager
 TransformationManager* _transformManager;
@@ -171,6 +173,7 @@ void InitParams()
     paramSimulationMode = parameterHandler->AddParameter("SimulationMode", "", false);
     paramQRCodeMode = parameterHandler->AddParameter("QRCodeMode", "", false);
     paramAprilTagMode = parameterHandler->AddParameter("AprilTagMode", "", true);
+    paramTagSize = parameterHandler->AddParameter("TagSize", "",  0.045f);
 }
 
 void imageCallback(const sensor_msgs::Image::ConstPtr& msg)
@@ -295,6 +298,8 @@ void PrintMatrix(cv::Mat mat)
     ROS_INFO_STREAM(mat.rowRange(0, 3));
 }
 
+
+
 void FuseInformation()
 {
     auto qrCodesData = GetQrCodesData();
@@ -305,7 +310,24 @@ void FuseInformation()
     pcl::PCLPointCloud2 pclCloud;
     pcl_conversions::moveToPCL(depthMsg, pclCloud);
 
-    qrCodesData = _poseDerivator.CalculateQRPose(qrCodesData, pclCloud, paramReferenceCorner.GetValue());
+    /*
+    int maxMeanCount = 2;
+
+    if (tempClouds.size() >= maxMeanCount)
+    {
+        tempClouds.pop();
+        tempQRCodeData.pop();
+    }
+
+    std::queue<pcl::PCLPointCloud2> tempClouds;
+    std::queue<std::vector<QRCodeData>> tempQRCodeData;
+    tempClouds.push(pclCloud);
+    tempQRCodeData.push(qrCodesData);
+    */
+        //calculate mean values:
+
+    qrCodesData = _poseDerivator->CalculateQRPose(qrCodesData, pclCloud, paramReferenceCorner.GetValue(),
+                                                  _currentCameraInfo);
     //send derived Transforms to transformation manager
     _transformManager->AddQrCodesData(qrCodesData);
     SetQrCodesData(qrCodesData);
@@ -411,6 +433,8 @@ int main(int argc, char **argv)
     node = new ros::NodeHandle(nodeName);
 
     Init();
+
+    _poseDerivator = new PoseDerivator(paramTagSize.GetValue());
 
     //define subcriber
     std::string baseTopic = paramCameraBaseTopic.GetValue();

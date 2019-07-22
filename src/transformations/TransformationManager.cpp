@@ -23,6 +23,8 @@ void TransformationManager::InitParameter()
     _paramRefreshRate = _parameterHandler->AddParameter("RefreshRate", subNamespace, "", int(5));
     _paramPoseErrorFactor = _parameterHandler->AddParameter("PoseErrorFactor", subNamespace, "", 0.1f);
     _paramPublishEdgePoses = _parameterHandler->AddParameter("PublishEdgePoses", subNamespace, "", true);
+    _paramUse2DEstimatedOrientation = _parameterHandler->AddParameter("Use2DEstimatedOrientation", subNamespace, "",
+                                                                      true);
 }
 
 void TransformationManager::InitRosStuff()
@@ -53,6 +55,8 @@ void TransformationManager::PublishTransforms()
     std_msgs::Header header;
     header.stamp = ros::Time::now();
 
+    bool use2DEstimatedOrientation = _paramUse2DEstimatedOrientation.GetValue();
+
     //create transforms for each entry
     for(int i = 0; i < qrCodes.size(); i++)
     {
@@ -65,10 +69,23 @@ void TransformationManager::PublishTransforms()
         //set transfromation information
         geometry_msgs::Pose pose = qrCodes[i].qrPose;
 
-        transform.transform.rotation = pose.orientation;
+        geometry_msgs::Quaternion tagOrientation;
+
+
+        if(use2DEstimatedOrientation)
+        {
+            tagOrientation = qrCodes[i].estimatedPose.orientation;
+        }
+        else
+        {
+            tagOrientation = pose.orientation;
+        }
+
+
         transform.transform.translation.x = pose.position.x;
         transform.transform.translation.y = pose.position.y;
         transform.transform.translation.z = pose.position.z;
+        transform.transform.rotation = tagOrientation;
 
         float errorFactor =  _paramPoseErrorFactor.GetValue();
 
@@ -87,7 +104,7 @@ void TransformationManager::PublishTransforms()
                 {
                     auto point = qrCodes[i].points3D[j];
 
-                    geometry_msgs::TransformStamped edgeTransform;
+                    geometry_msgs::TransformStamped edgeTransform = transform;
                     header.frame_id = qrCodes[i].cameraFrameID;
                     edgeTransform.header = header;
                     edgeTransform.header.frame_id = qrCodes[i].cameraFrameID;
@@ -95,8 +112,8 @@ void TransformationManager::PublishTransforms()
                     edgeTransform.transform.translation.x = point(0);
                     edgeTransform.transform.translation.y = point(1);
                     edgeTransform.transform.translation.z = point(2);
-                    edgeTransform.transform.rotation = pose.orientation;
                     _transformationHandler->SendStableTransform(edgeTransform, errorFactor);
+                    //_transformationHandler->SendTransform(edgeTransform);
                 }
             }
 
