@@ -5,7 +5,7 @@ cameraBaseTopic: /depthcam1/depthcam1/,
 
 ApriTagScanner: 
   {
-  TagPrefix: aprilTag_,
+  TagPrefix: boxApril_,
   ReferenceSize: 0.0, 
   RefineDecode: false, 
   RefineEdges: true, 
@@ -26,6 +26,7 @@ QRCodeScanner:
      ReferenceSize: 0.0
     },
 
+TagSize: 0.045,
 ReferenceCorner: 4,
 RefreshRate: 30,
 ServiceMode: false,
@@ -34,6 +35,7 @@ transformation_manager:
   {
     RefreshRate: 30,
     PoseErrorFactor: 0.0,
-    PublishEdgePoses: false
+    PublishEdgePoses: false,
+    Use2DEstimatedOrientation: true
   },
 }
