@@ -1,4 +1,0 @@
-sudo apt-get install libzbar-dev
-
-# Copyright
-apriltags2_ros - thanks for catkinizing :-)
